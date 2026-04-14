@@ -1,0 +1,10 @@
+tinyasm
+tinyasm2
+
+*.exe
+*.com
+*.bin
+*.tin
+
+*.o
+*.obj

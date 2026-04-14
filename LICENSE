@@ -1,0 +1,49 @@
+tinyasm
+Copyright (c) 2024-2026, danko1122q (https://github.com/danko1122q)
+All rights reserved.
+
+---
+
+tinyasm is a derivative work based on fasm (flat assembler).
+
+fasm (flat assembler)
+Copyright (c) 1999-2026, Tomasz Grysztar (https://flatassembler.net)
+All rights reserved.
+
+The fasm assembler engine, instruction encoding tables, macro system,
+expression evaluator, and output format writers incorporated in this
+project are the work of Tomasz Grysztar and remain under his copyright.
+
+---
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+1. Redistributions of source code must retain the above copyright
+   notices (both danko1122q and Tomasz Grysztar), this list of
+   conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright
+   notices, this list of conditions and the following disclaimer in
+   the documentation and/or other materials provided with the
+   distribution.
+
+3. The copyright notices in the code are not to be removed.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+The licence and distribution terms for any publicly available version
+or derivative of this code cannot be changed. This code cannot simply
+be copied and put under another distribution licence (including the
+GNU Public Licence).
