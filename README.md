@@ -2,8 +2,6 @@
 
 A lightweight x86/x64 assembler for Linux and Windows, derived from [fasm (flat assembler)](https://flatassembler.net) by Tomasz Grysztar.
 
-**Version:** 1.0.0
-
 ---
 
 ## Table of Contents
