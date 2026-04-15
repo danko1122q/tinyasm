@@ -1,5 +1,5 @@
 ; tinyasm Win32 platform layer
-; Drop-in replacement for core/linux.inc when targeting Windows.
+; Drop-in replacement for core/linux .tny when targeting Windows.
 ; All symbols use the ta_ prefix to match tinyasm naming conventions.
 
 ; ---- Win32 constants -------------------------------------------------------
@@ -22,7 +22,7 @@ INVALID_HANDLE_VALUE   = -1
 
 ; ---------------------------------------------------------------------------
 ; ta_init_memory
-;   Mirrors the brk-based logic in linux.inc exactly.
+;   Mirrors the brk-based logic in linux .tny exactly.
 ;   Allocates via VirtualAlloc, splits into heap (lower 3/4) + auxmem (upper 1/4).
 ; ---------------------------------------------------------------------------
 ta_init_memory:
@@ -74,7 +74,7 @@ ta_exit_program:
 
 ; ---------------------------------------------------------------------------
 ; ta_win32_init_argv
-;   Parses GetCommandLineA() into argc/argv layout compatible with linux.inc.
+;   Parses GetCommandLineA() into argc/argv layout compatible with linux .tny.
 ;   Sets ta_command_line to point at our synthetic argc/argv block.
 ; ---------------------------------------------------------------------------
 ta_win32_init_argv:
@@ -153,7 +153,7 @@ ta_win32_init_argv:
 ; ta_get_environment_variable
 ;   esi = pointer to null-terminated variable name
 ;   edi = destination buffer
-;   Mirrors linux.inc walk-environ logic via GetEnvironmentVariableA.
+;   Mirrors linux .tny walk-environ logic via GetEnvironmentVariableA.
 ; ---------------------------------------------------------------------------
 ta_get_environment_variable:
 	push	ebx ecx edx
@@ -615,7 +615,7 @@ ta_assembler_error:
 
 ; ---------------------------------------------------------------------------
 ; ta_make_timestamp -> eax = milliseconds component, edx = seconds*1000
-;   Uses GetSystemTime, mirrors linux.inc timing interface.
+;   Uses GetSystemTime, mirrors linux .tny timing interface.
 ; ---------------------------------------------------------------------------
 ta_make_timestamp:
 	mov	r13d,edi
@@ -719,7 +719,7 @@ ta_make_timestamp:
 	add	esp,16
 	mov	edi,r13d
 	xor	edx,edx
-	; store into ta_timestamp like linux.inc does
+	; store into ta_timestamp like linux .tny does
 	mov	dword [ta_timestamp],eax
 	mov	dword [ta_timestamp+4],edx
 	ret

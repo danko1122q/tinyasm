@@ -12,7 +12,7 @@ else
 	entry	ta_start
 end if
 
-	include 'core/platform.inc'
+	include 'core/platform.tny'
 
 segment readable executable
 
@@ -334,7 +334,7 @@ ta_collect_path:
 	retn
 
 if defined WIN32
-include 'core/win32.inc'
+include 'core/win32.tny'
 else
 
 segment readable writeable
@@ -342,10 +342,10 @@ ta_out_buf_pos dd ?
 ta_out_buf rb TA_OUT_BUF_SIZE
 
 segment readable executable
-include 'core/linux.inc'
+include 'core/linux.tny'
 end if
 
-include 'core/ver.inc'
+include 'core/ver.tny'
 
 _ta_copyright db 'tinyasm project',0xA,0
 
@@ -366,25 +366,25 @@ _ta_seconds_suffix db ' ms, ',0
 _ta_bytes_suffix db ' bytes.',0xA,0
 _ta_no_low_memory db 'failed to allocate memory within 32-bit addressing range',0
 
-include 'core/fault.inc'
-include 'core/dump.inc'
-include 'core/expand.inc'
-include 'core/scan.inc'
-include 'core/tokens.inc'
-include 'core/emit.inc'
-include 'core/calc.inc'
-include 'arch/x86.inc'
-include 'arch/vec.inc'
-include 'core/output_fmt.inc'
+include 'core/fault.tny'
+include 'core/dump.tny'
+include 'core/expand.tny'
+include 'core/scan.tny'
+include 'core/tokens.tny'
+include 'core/emit.tny'
+include 'core/calc.tny'
+include 'arch/x86.tny'
+include 'arch/vec.tny'
+include 'core/output_fmt.tny'
 
-include 'core/structs.inc'
-include 'core/msgdata.inc'
+include 'core/structs.tny'
+include 'core/msgdata.tny'
 
 segment readable writeable
 
 align 4
 
-include 'core/state.inc'
+include 'core/state.tny'
 
 ta_command_line dq ?
 ta_memory_setting dd ?

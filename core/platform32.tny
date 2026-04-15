@@ -1,6 +1,6 @@
-; tinyasm platform32.inc
+; tinyasm platform32 .tny
 ; Compatibility macros for pure 32-bit ELF build.
-; Unlike platform.inc (which runs core 32-bit code on x64 ELF64),
+; Unlike platform .tny (which runs core 32-bit code on x64 ELF64),
 ; this file targets a native 32-bit ELF binary.
 ; No use32/use64 bridging is needed: the whole binary IS 32-bit.
 

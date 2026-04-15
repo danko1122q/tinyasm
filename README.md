@@ -43,14 +43,14 @@ If you don't have a tinyasm binary yet, build it with an existing assembler:
 
 ```sh
 # Linux 64-bit
-fasm tinyasm.asm tinyasm
+fasm tinyasm.s tinyasm
 chmod +x tinyasm
 
 # Windows 64-bit
-fasm -d WIN32=1 tinyasm.asm tinyasm.exe
+fasm -d WIN32=1 tinyasm.s tinyasm.exe
 
 # Linux 32-bit (separate entry file)
-fasm tinyasm32.asm tinyasm32
+fasm tinyasm32.s tinyasm32
 chmod +x tinyasm32
 ```
 
@@ -60,13 +60,13 @@ Once you have a tinyasm binary, it can rebuild itself:
 
 ```sh
 # Linux 64-bit
-./tinyasm tinyasm.asm tinyasm
+./tinyasm tinyasm.s tinyasm
 
 # Windows 64-bit
-./tinyasm -d WIN32=1 tinyasm.asm tinyasm.exe
+./tinyasm -d WIN32=1 tinyasm.s tinyasm.exe
 
 # Linux 32-bit
-./tinyasm tinyasm32.asm tinyasm32
+./tinyasm tinyasm32.s tinyasm32
 ```
 
 ---
@@ -116,31 +116,31 @@ tinyasm exits with the number of passes performed — a two-pass build exits 2, 
 ### Examples
 
 ```sh
-# Assemble hello.asm → hello (ELF64 executable)
-./tinyasm hello_elf64.asm hello64
+# Assemble hello.s → hello (ELF64 executable)
+./tinyasm hello_elf64.s hello64
 chmod +x hello64
 ./hello64
 
 # Let tinyasm derive the output name
-./tinyasm hello_elf64.asm
+./tinyasm hello_elf64.s
 
 # Pass a define at build time
-./tinyasm -d DEBUG=1 main.asm main
+./tinyasm -d DEBUG=1 main.s main
 
 # Conditional assembly
-./tinyasm -d VERSION=2 main.asm main
+./tinyasm -d VERSION=2 main.s main
 
 # Limit memory to 8 MB, max 50 passes
-./tinyasm -m 8192 -p 50 main.asm main
+./tinyasm -m 8192 -p 50 main.s main
 
 # Include directories
-./tinyasm -i ./include -i /usr/local/share/asm main.asm main
+./tinyasm -i ./include -i /usr/local/share/asm main.s main
 
 # Combine INCLUDE env var with -i
-INCLUDE=/usr/share/asm ./tinyasm -i ./include main.asm main
+INCLUDE=/usr/share/asm ./tinyasm -i ./include main.s main
 
 # Dump symbol table
-./tinyasm -s symbols.txt main.asm main
+./tinyasm -s symbols.txt main.s main
 ```
 
 ---
@@ -152,7 +152,7 @@ The repo includes ready-to-build example files. All can be assembled with either
 ### Linux ELF32 executable
 
 ```sh
-./tinyasm32 hello_elf32.asm hello32
+./tinyasm32 hello_elf32.s hello32
 chmod +x hello32
 ./hello32
 ```
@@ -160,7 +160,7 @@ chmod +x hello32
 ### Linux ELF64 executable
 
 ```sh
-./tinyasm32 hello_elf64.asm hello64
+./tinyasm32 hello_elf64.s hello64
 chmod +x hello64
 ./hello64
 ```
@@ -168,7 +168,7 @@ chmod +x hello64
 ### Linux ELF64 object file
 
 ```sh
-./tinyasm32 hello_elf64_obj.asm hello64.o
+./tinyasm32 hello_elf64_obj.s hello64.o
 ld hello64.o -o hello64_linked
 chmod +x hello64_linked
 ./hello64_linked
@@ -177,7 +177,7 @@ chmod +x hello64_linked
 ### Windows PE32 executable
 
 ```sh
-./tinyasm32 hello_pe32.asm hello32.exe
+./tinyasm32 hello_pe32.s hello32.exe
 # Run on Windows or Wine:
 wine hello32.exe
 ```
@@ -185,7 +185,7 @@ wine hello32.exe
 ### Windows PE64 executable
 
 ```sh
-./tinyasm32 hello_pe64.asm hello64.exe
+./tinyasm32 hello_pe64.s hello64.exe
 # Run on Windows or Wine:
 wine hello64.exe
 ```
@@ -193,7 +193,7 @@ wine hello64.exe
 ### Raw binary (MBR bootloader)
 
 ```sh
-./tinyasm32 hello_bin.asm hello.bin
+./tinyasm32 hello_bin.s hello.bin
 # Inspect:
 xxd hello.bin | head
 # Run in QEMU:
@@ -277,7 +277,7 @@ end repeat
 ### Including files
 
 ```asm
-include 'mylib.inc'
+include 'mylib.tny'
 ```
 
 ---
@@ -307,7 +307,7 @@ tinyasm reports descriptive errors to stderr. Common messages and their meanings
 
 | Message | Meaning |
 |---|---|
-| `source file not found` | Input `.asm` file does not exist |
+| `source file not found` | Input `.s` file does not exist |
 | `file not found` | An `include`d file could not be located |
 | `out of memory` | Exceeded the memory limit; try `-m` to increase it |
 | `code generation not possible` | A forward reference could not be resolved after max passes |
@@ -335,29 +335,29 @@ tinyasm reports descriptive errors to stderr. Common messages and their meanings
 ## Project structure
 
 ```
-tinyasm.asm           entry point: startup, argument parsing, assembly pipeline
-tinyasm32.asm         entry point for Linux 32-bit build
+tinyasm.s           entry point: startup, argument parsing, assembly pipeline
+tinyasm32.s         entry point for Linux 32-bit build
 core/
-  platform.inc        compatibility macros (use32/use64 bridging)
-  platform32.inc      32-bit platform compatibility macros
-  linux.inc           Linux 64-bit platform layer: syscalls for file I/O, memory, buffered output
-  linux32.inc         Linux 32-bit platform layer
-  win32.inc           Windows platform layer: CreateFile, VirtualAlloc, WriteConsole, etc.
-  ver.inc             version constants (VERSION_MAJOR, VERSION_MINOR, VERSION_STRING)
-  state.inc           assembler state variables
-  fault.inc           error dispatch: maps error conditions to messages and exit
-  msgdata.inc         error message strings
-  expand.inc          preprocessor: macro expansion, include resolution, definitions
-  scan.inc            source scanner and parser
-  tokens.inc          expression tokenizer and evaluator
-  emit.inc            instruction emitter
-  calc.inc            expression calculator
-  output_fmt.inc      output format writers: ELF, PE, binary
-  structs.inc         instruction encoding tables and opcode data
-  dump.inc            symbol table dump (-s flag)
+  platform.tny        compatibility macros (use32/use64 bridging)
+  platform32.tny      32-bit platform compatibility macros
+  linux.tny           Linux 64-bit platform layer: syscalls for file I/O, memory, buffered output
+  linux32.tny         Linux 32-bit platform layer
+  win32.tny           Windows platform layer: CreateFile, VirtualAlloc, WriteConsole, etc.
+  ver.tny             version constants (VERSION_MAJOR, VERSION_MINOR, VERSION_STRING)
+  state.tny           assembler state variables
+  fault.tny           error dispatch: maps error conditions to messages and exit
+  msgdata.tny         error message strings
+  expand.tny          preprocessor: macro expansion, include resolution, definitions
+  scan.tny            source scanner and parser
+  tokens.tny          expression tokenizer and evaluator
+  emit.tny            instruction emitter
+  calc.tny            expression calculator
+  output_fmt.tny      output format writers: ELF, PE, binary
+  structs.tny         instruction encoding tables and opcode data
+  dump.tny            symbol table dump (-s flag)
 arch/
-  x86.inc             x86 / x64 instruction encoding
-  vec.inc             SSE / AVX / AVX-512 vector instruction encoding
+  x86.tny             x86 / x64 instruction encoding
+  vec.tny             SSE / AVX / AVX-512 vector instruction encoding
 ```
 
 ---

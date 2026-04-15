@@ -5,7 +5,7 @@
 	format	ELF executable 3
 	entry	ta_start
 
-	include 'core/platform32.inc'
+	include 'core/platform32.tny'
 
 segment readable executable
 
@@ -320,9 +320,9 @@ ta_collect_path:
 	mov	[ta_path_pointer],edi
 	retn
 
-include 'core/linux32.inc'
+include 'core/linux32.tny'
 
-include 'core/ver.inc'
+include 'core/ver.tny'
 
 _ta_copyright db 'tinyasm project',0xA,0
 
@@ -342,25 +342,25 @@ _ta_passes_suffix db ' passes, ',0
 _ta_seconds_suffix db ' ms, ',0
 _ta_bytes_suffix db ' bytes.',0xA,0
 
-include 'core/fault.inc'
-include 'core/dump.inc'
-include 'core/expand.inc'
-include 'core/scan.inc'
-include 'core/tokens.inc'
-include 'core/emit.inc'
-include 'core/calc.inc'
-include 'arch/x86.inc'
-include 'arch/vec.inc'
-include 'core/output_fmt.inc'
+include 'core/fault.tny'
+include 'core/dump.tny'
+include 'core/expand.tny'
+include 'core/scan.tny'
+include 'core/tokens.tny'
+include 'core/emit.tny'
+include 'core/calc.tny'
+include 'arch/x86.tny'
+include 'arch/vec.tny'
+include 'core/output_fmt.tny'
 
-include 'core/structs.inc'
-include 'core/msgdata.inc'
+include 'core/structs.tny'
+include 'core/msgdata.tny'
 
 segment readable writeable
 
 align 4
 
-include 'core/state.inc'
+include 'core/state.tny'
 
 ta_command_line dd ?
 ta_memory_setting dd ?

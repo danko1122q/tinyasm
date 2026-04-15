@@ -1,7 +1,7 @@
-; tinyasm Linux 32-bit platform layer (core/linux32.inc)
+; tinyasm Linux 32-bit platform layer (core/linux32 .tny)
 ; All syscalls use int 0x80 convention.
 ; Register mapping: eax=syscall, ebx=arg1, ecx=arg2, edx=arg3.
-; Derived from fasm/source/linux/system.inc and adapted for tinyasm ta_ prefix.
+; Derived from fasm/source/linux/system .tny and adapted for tinyasm ta_ prefix.
 
 O_ACCMODE  = 0003o
 O_RDONLY   = 0000o
