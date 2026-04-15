@@ -74,9 +74,11 @@ ta_convert_expression:
 ta_convert_number:
 	lea	eax,[edi+20h]
 	mov	edx,[ta_memory_end]
+	promote_edx
 	cmp	[ta_source_start],0
 	je	ta_check_memory_for_number
 	mov	edx,[ta_labels_list]
+	promote_edx
       ta_check_memory_for_number:
 	cmp	eax,edx
 	jae	ta_out_of_memory
@@ -270,6 +272,7 @@ ta_get_number:
       ta_get_dec_number:
 	mov	ebx,esi
 	mov	esi,[ta_number_start]
+	promote_esi
       ta_get_dec_digit:
 	cmp	esi,ebx
 	ja	ta_number_ok
@@ -329,6 +332,7 @@ ta_get_number:
 	pop	eax
       ta_invalid_number:
 	mov	esi,[ta_number_start]
+	promote_esi
 	dec	esi
       ta_not_number:
 	dec	esi

@@ -11,7 +11,9 @@ ta_parser:
 	mov	[ta_blocks_stack],eax
 	mov	[ta_parsed_lines],eax
 	mov	esi,[ta_memory_start]
+	promote_esi
 	mov	edi,[ta_source_start]
+	promote_edi
       ta_parser_loop:
 	mov	[ta_current_line],esi
 	lea	eax,[edi+100h]
@@ -1188,10 +1190,12 @@ ta_get_label_id:
 	je	ta_standard_label
 	push	edi
 	mov	edi,[ta_additional_memory_end]
+	promote_edi
 	sub	edi,2
 	sub	edi,ecx
 	push	ecx esi
 	mov	esi,[ta_current_locals_prefix]
+	promote_esi
 	lods	byte [esi]
 	movzx	ecx,al
 	sub	edi,ecx
@@ -1378,6 +1382,7 @@ ta_get_label_id:
 	ret
       ta_extend_tree:
 	mov	edx,[ta_free_additional_memory]
+	promote_edx
 	lea	eax,[edx+8]
 	cmp	eax,[ta_additional_memory_end]
 	ja	ta_out_of_memory
@@ -1437,6 +1442,7 @@ ta_get_label_id:
 	inc	esi
       ta_label_name_ok:
 	mov	edx,[ta_free_additional_memory]
+	promote_edx
 	lea	eax,[edx+8]
 	cmp	eax,[ta_additional_memory_end]
 	ja	ta_out_of_memory

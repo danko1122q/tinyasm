@@ -178,4 +178,14 @@ macro use16
 
 }
 
+; Pointer-promotion helpers: after loading a 32-bit pointer from a dd state field,
+; call promote_ptr to eliminate address-size override prefix (0x67) in 64-bit mode.
+; mov esi,[dd_field] implicitly zero-extends to rsi, but assembler still emits 0x67
+; when [esi] is used as addressing base. Zero-extend explicitly fixes this.
+macro promote_esi { mov esi,esi }
+macro promote_edi { mov edi,edi }
+macro promote_ebx { mov ebx,ebx }
+macro promote_ecx { mov ecx,ecx }
+macro promote_edx { mov edx,edx }
+
 use32

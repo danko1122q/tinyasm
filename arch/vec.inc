@@ -3293,6 +3293,7 @@ ta_store_vex_instruction_code:
 	jb	ta_prepare_vex
 	dec	[ta_displacement_compression]
 	mov	edx,[ta_uncompressed_displacement]
+	promote_edx
       ta_prepare_vex:
 	mov	ah,[ta_extended_code]
 	cmp	ah,38h

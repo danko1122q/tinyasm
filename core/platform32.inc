@@ -53,4 +53,11 @@ macro use16
 	use16
 }
 
+; Pointer-promotion helpers: no-ops in 32-bit mode (addressing is already 32-bit native)
+macro promote_esi { }
+macro promote_edi { }
+macro promote_ebx { }
+macro promote_ecx { }
+macro promote_edx { }
+
 use32

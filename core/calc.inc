@@ -1755,6 +1755,7 @@ ta_calculate_relative_offset:
 	mov	[ta_value_sign],bl
 	mov	bl,[ta_value_type]
 	mov	ecx,[ta_address_symbol]
+	promote_ecx
 	mov	[ta_symbol_identifier],ecx
 	test	bl,1
 	jnz	ta_relative_offset_unallowed
@@ -1894,6 +1895,7 @@ ta_calculate_logical_expression:
 	or	bl,bl
 	jz	ta_check_values_registers
 	mov	ebx,[ta_symbol_identifier]
+	promote_ebx
 	cmp	ebx,[esp+8]
 	jne	ta_values_not_relative
       ta_check_values_registers:

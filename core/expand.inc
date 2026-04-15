@@ -21,6 +21,7 @@ ta_preprocessor:
 	mov	ax,1 + '0' shl 8
 	stos	word [edi]
 	mov	edi,[ta_memory_start]
+	promote_edi
 	mov	[ta_include_paths],edi
 	mov	esi,include_variable
 	call	ta_get_environment_variable
@@ -50,6 +51,7 @@ ta_preprocessor:
 	mov	[ta_macro_status],al
 	mov	[ta_current_line],eax
 	mov	esi,[ta_initial_definitions]
+	promote_esi
 	test	esi,esi
 	jz	ta_predefinitions_ok
       ta_process_predefinitions:
@@ -63,6 +65,7 @@ ta_preprocessor:
 	call	ta_add_preprocessor_symbol
 	pop	esi
 	mov	edi,[ta_memory_start]
+	promote_edi
 	mov	[edx+8],edi
       ta_convert_predefinition:
 	cmp	edi,[ta_memory_end]
@@ -193,10 +196,12 @@ ta_preprocessor:
 	jmp	ta_process_predefinitions
       ta_predefinitions_ok:
 	mov	esi,[ta_input_file]
+	promote_esi
 	mov	edx,esi
 	call	ta_open
 	jc	ta_main_file_not_found
 	mov	edi,[ta_memory_start]
+	promote_edi
 	call	ta_preprocess_file
 	cmp	[ta_macro_status],0
 	je	ta_process_postponed
@@ -254,6 +259,7 @@ ta_preprocess_file:
 	call	ta_lseek
 	pop	ecx
 	mov	edx,[ta_memory_end]
+	promote_edx
 	dec	edx
 	mov	byte [edx],1Ah
 	sub	edx,ecx
@@ -594,6 +600,7 @@ ta_preprocess_line:
 	push	ecx esi
       ta_preprocess_current_line:
 	mov	esi,[ta_current_line]
+	promote_esi
 	add	esi,16
 	cmp	word [esi],3Bh
 	jne	ta_line_start_ok
@@ -626,6 +633,7 @@ ta_preprocess_line:
 	call	ta_process_macro_operators
       ta_initial_preprocessing_ok:
 	mov	esi,[ta_current_line]
+	promote_esi
 	add	esi,16
 	mov	al,[ta_macro_status]
 	test	al,2
@@ -686,6 +694,7 @@ ta_preprocess_line:
 	jc	ta_not_preprocessor_symbol
 	push	edx esi
 	mov	esi,[ta_struc_name]
+	promote_esi
 	mov	[ta_struc_label],esi
 	sub	[ta_struc_label],2
 	mov	cl,[esi-1]
@@ -705,6 +714,7 @@ ta_preprocess_line:
 	rep	movs byte [edi],[esi]
 	cld
 	mov	edi,[ta_struc_label]
+	promote_edi
 	mov	esi,[edx+8]
 	mov	ecx,[edx+12]
 	add	[ta_struc_name],ecx
@@ -722,6 +732,7 @@ ta_preprocess_line:
 	jmp	ta_use_macro
       ta_struc_name_ok:
 	mov	edx,[ta_struc_name]
+	promote_edx
 	movzx	eax,byte [edx-1]
 	add	edx,eax
 	push	edi
@@ -807,6 +818,7 @@ ta_preprocess_line:
 	jmp	ta_preprocess_instruction
       ta_not_preprocessor_symbol:
 	mov	esi,[ta_current_offset]
+	promote_esi
 	call	ta_process_equ_constants
       ta_line_preprocessed:
 	pop	esi ecx
@@ -960,6 +972,7 @@ ta_add_preprocessor_symbol:
       ta_add_symbol_entry:
 	mov	eax,edx
 	mov	edx,[ta_labels_list]
+	promote_edx
 	sub	edx,16
 	cmp	edx,[ta_free_additional_memory]
 	jb	ta_out_of_memory
@@ -972,6 +985,7 @@ ta_add_preprocessor_symbol:
 	ret
       ta_extend_hashes_tree:
 	mov	edx,[ta_labels_list]
+	promote_edx
 	sub	edx,8
 	cmp	edx,[ta_free_additional_memory]
 	jb	ta_out_of_memory
@@ -986,6 +1000,7 @@ ta_add_preprocessor_symbol:
 	dec	ecx
 	jnz	ta_extend_hashes_tree
 	mov	edx,[ta_labels_list]
+	promote_edx
 	sub	edx,16
 	cmp	edx,[ta_free_additional_memory]
 	jb	ta_out_of_memory
@@ -1007,6 +1022,7 @@ ta_define_equ_constant:
 	push	esi
 	call	ta_process_equ_constants
 	mov	esi,[ta_struc_name]
+	promote_esi
 	mov	ch,10b
       ta_define_preprocessor_constant:
 	mov	byte [esi-2],3Bh
@@ -1230,6 +1246,7 @@ ta_define_macro:
 	xor	al,al
 	stos	byte [edi]
 	mov	esi,[ta_current_line]
+	promote_esi
 	mov	[ta_current_line],edi
 	mov	ecx,4
 	rep	movs dword [edi],[esi]
@@ -1469,6 +1486,7 @@ ta_process_equ_constants:
 	jz	ta_process_after_replaced
 	mov	edx,edi
 	mov	ecx,[ta_current_section]
+	promote_ecx
 	sub	edx,ecx
 	sub	ecx,esi
 	rep	movs byte [edi],[esi]
@@ -1527,6 +1545,7 @@ ta_process_equ_constants:
 	jmp	ta_process_after_replaced
     ta_get_current_line_from_file:
 	mov	ebx,[ta_current_line]
+	promote_ebx
       ta_find_line_from_file:
 	test	ebx,ebx
 	jz	ta_line_from_file_found
@@ -1902,6 +1921,7 @@ ta_use_instant_macro:
 	mov	[ta_current_line],eax
 	mov	[ta_macro_line],eax
 	mov	esi,[ta_instant_macro_start]
+	promote_esi
 	cmp	[ta_base_code],10h
 	jae	ta_do_match
 	cmp	[ta_base_code],0
@@ -2052,12 +2072,14 @@ ta_do_irp:
 	cmp	[ta_base_code],2
 	je	ta_get_irps_parameter
 	mov	edx,[ta_parameters_end]
+	promote_edx
 	mov	al,[edx]
 	push	eax
 	mov	byte [edx],0
       ta_get_irp_parameter:
 	inc	[ta_counter_limit]
 	mov	esi,[ta_instant_macro_start]
+	promote_esi
 	inc	esi
 	call	ta_get_macro_argument
 	cmp	byte [ebx],','
@@ -2071,6 +2093,7 @@ ta_do_irp:
 	jmp	ta_instant_macro_parameters_ok
       ta_get_irps_parameter:
 	mov	esi,[ta_instant_macro_start]
+	promote_esi
 	inc	esi
 	lods	byte [esi]
 	movzx	ecx,al
@@ -2137,6 +2160,7 @@ ta_do_irp:
       ta_add_irpv_value:
 	push	edx
 	mov	esi,[ta_instant_macro_start]
+	promote_esi
 	inc	esi
 	lods	byte [esi]
 	movzx	ecx,al
@@ -2814,9 +2838,11 @@ ta_close_macro_block:
 	mov	[ta_counter],eax
       ta_continue_block:
 	mov	esi,[ta_macro_block]
+	promote_esi
 	mov	eax,[ta_macro_block_line]
 	mov	[ta_macro_line],eax
 	mov	ecx,[ta_macro_block_line_number]
+	promote_ecx
 	stc
 	ret
       ta_block_closed:
@@ -2874,6 +2900,7 @@ ta_add_macro_symbol:
 	mov	eax,[ebx]
       ta_make_macro_symbol:
 	mov	edx,[ta_free_additional_memory]
+	promote_edx
 	add	edx,16
 	cmp	edx,[ta_labels_list]
 	ja	ta_out_of_memory
@@ -2885,6 +2912,7 @@ ta_add_macro_symbol:
 	ret
       ta_extend_macro_symbol_tree:
 	mov	edx,[ta_free_additional_memory]
+	promote_edx
 	add	edx,16
 	cmp	edx,[ta_labels_list]
 	ja	ta_out_of_memory
@@ -2914,6 +2942,7 @@ ta_include_file:
 	push	esi
 	push	edi
 	mov	ebx,[ta_current_line]
+	promote_ebx
       ta_find_current_file_path:
 	mov	esi,[ebx]
 	test	byte [ebx+7],80h

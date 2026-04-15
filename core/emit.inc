@@ -13,7 +13,9 @@ ta_assembler:
 	mov	eax,[ta_additional_memory_end]
 	mov	[ta_structures_buffer],eax
 	mov	esi,[ta_source_start]
+	promote_esi
 	mov	edi,[ta_code_start]
+	promote_edi
 	xor	eax,eax
 	mov	dword [ta_adjustment],eax
 	mov	dword [ta_adjustment+4],eax
@@ -133,6 +135,7 @@ ta_assembler:
 
 ta_create_addressing_space:
 	mov	ebx,[ta_addressing_space]
+	promote_ebx
 	test	ebx,ebx
 	jz	ta_init_addressing_space
 	test	byte [ebx+0Ah],1
@@ -142,6 +145,7 @@ ta_create_addressing_space:
 	mov	[ebx+1Ch],eax
       ta_init_addressing_space:
 	mov	ebx,[ta_tagged_blocks]
+	promote_ebx
 	mov	dword [ebx-4],10h
 	mov	dword [ebx-8],24h
 	sub	ebx,8+24h
@@ -195,6 +199,7 @@ ta_assemble_line:
 	cmp	[ta_next_pass_needed],0
 	jne	ta_continue_line
 	mov	ebx,[ta_tagged_blocks]
+	promote_ebx
 	mov	dword [ebx-4],1
 	mov	dword [ebx-8],14h
 	sub	ebx,8+14h
@@ -295,6 +300,7 @@ ta_assemble_line:
 	mov	cx,[ta_current_pass]
 	xchg	[ebx+16],cx
 	mov	edx,[ta_current_line]
+	promote_edx
 	mov	[ebx+28],edx
 	and	byte [ebx+8],not 2
 	test	byte [ebx+8],1
@@ -364,6 +370,7 @@ ta_assemble_line:
 	or	ch,ch
 	jz	ta_constant_symbol_ok
 	mov	edx,[ta_symbol_identifier]
+	promote_edx
 	cmp	edx,[ebx+20]
 	mov	[ebx+20],edx
 	setne	al
@@ -372,6 +379,7 @@ ta_assemble_line:
 	mov	cx,[ta_current_pass]
 	xchg	[ebx+16],cx
 	mov	edx,[ta_current_line]
+	promote_edx
 	mov	[ebx+28],edx
 	test	byte [ebx+8],1
 	jz	ta_new_constant
@@ -423,8 +431,10 @@ ta_assemble_line:
 	mov	[eax+8],dx
 	mov	[eax+16],cx
 	mov	edx,[ta_current_line]
+	promote_edx
 	mov	[eax+28],edx
 	mov	ebx,[ta_addressing_space]
+	promote_ebx
 	mov	[eax],ebx
 	or	byte [ebx+0Ah],2
 	jmp	ta_continue_line
@@ -474,6 +484,7 @@ ta_org_directive:
 	jnz	ta_invalid_use_of_symbol
 	push	eax
 	mov	ebx,[ta_addressing_space]
+	promote_ebx
 	mov	eax,edi
 	sub	eax,[ebx+18h]
 	mov	[ebx+1Ch],eax
@@ -496,6 +507,7 @@ ta_org_directive:
 	call	ta_recoverable_overflow
       ta_org_value_ok:
 	mov	edx,[ta_symbol_identifier]
+	promote_edx
 	mov	[ebx+14h],edx
 	cmp	[ta_output_format],1
 	ja	ta_instruction_assembled
@@ -564,6 +576,7 @@ ta_label_directive:
 	setne	al
 	or	ah,al
 	mov	edx,[ta_address_symbol]
+	promote_edx
 	mov	cl,[ta_label_size]
 	call	ta_finish_label_symbol
 	jmp	ta_instruction_assembled
@@ -612,6 +625,7 @@ ta_load_directive:
 	cmp	al,'('
 	jne	ta_invalid_argument
 	mov	ebx,[ta_addressing_space]
+	promote_ebx
 	mov	ecx,edi
 	sub	ecx,[ebx+18h]
 	mov	[ebx+1Ch],ecx
@@ -702,6 +716,7 @@ ta_load_directive:
 	add	eax,ecx
 	jc	ta_bad_data_address
 	mov	edx,[ta_addressing_space]
+	promote_edx
 	test	byte [edx+0Ah],1
 	jnz	ta_data_offset_from_virtual
 	cmp	eax,edi
@@ -762,6 +777,7 @@ ta_display_directive:
 	mov	ecx,eax
 	push	edi
 	mov	edi,[ta_tagged_blocks]
+	promote_edi
 	sub	edi,8
 	sub	edi,eax
 	cmp	edi,[esp]
@@ -778,6 +794,7 @@ ta_display_directive:
 	call	ta_get_byte_value
 	push	edi
 	mov	edi,[ta_tagged_blocks]
+	promote_edi
 	sub	edi,8+1
 	mov	[ta_tagged_blocks],edi
 	stos	byte [edi]
@@ -799,6 +816,7 @@ ta_show_display_buffer:
 	or	eax,eax
 	jz	ta_display_done
 	mov	esi,[ta_labels_list]
+	promote_esi
 	cmp	esi,eax
 	je	ta_display_done
       ta_display_messages:
@@ -823,7 +841,9 @@ ta_show_display_buffer:
 	jecxz	ta_skip_block
 	push	esi
 	mov	edi,[ta_free_additional_memory]
+	promote_edi
 	mov	esi,[ta_output_file]
+	promote_esi
 	test	esi,esi
 	jz	ta_addressing_space_written
 	xor	ebx,ebx
@@ -863,6 +883,7 @@ ta_show_display_buffer:
 	xor	al,al
 	stos	byte [edi]
 	mov	edx,[ta_free_additional_memory]
+	promote_edx
 	call	ta_create
 	jc	ta_write_failed
 	mov	esi,[esp]
@@ -957,6 +978,7 @@ ta_virtual_directive:
 	mov	cx,bx
 	push	ecx eax
 	mov	ebx,[ta_addressing_space]
+	promote_ebx
 	test	byte [ebx+0Ah],1
 	jnz	ta_non_virtual_end_ok
 	mov	eax,edi
@@ -1012,6 +1034,7 @@ ta_virtual_directive:
 	jmp	ta_instruction_assembled
       ta_allocate_structure_data:
 	mov	ebx,[ta_structures_buffer]
+	promote_ebx
 	sub	ebx,18h
 	cmp	ebx,[ta_free_additional_memory]
 	jb	ta_out_of_memory
@@ -1019,6 +1042,7 @@ ta_virtual_directive:
 	ret
       ta_find_structure_data:
 	mov	ebx,[ta_structures_buffer]
+	promote_ebx
       ta_scan_structures:
 	cmp	ebx,[ta_additional_memory_end]
 	je	ta_no_such_structure
@@ -1035,11 +1059,14 @@ ta_virtual_directive:
 	call	ta_allocate_structure_data
 	mov	word [ebx],ta_virtual_directive-ta_instruction_handler
 	mov	ecx,[ta_addressing_space]
+	promote_ecx
 	mov	[ebx+12],ecx
 	mov	[ebx+8],edi
 	mov	ecx,[ta_current_line]
+	promote_ecx
 	mov	[ebx+4],ecx
 	mov	ebx,[ta_addressing_space]
+	promote_ebx
 	mov	eax,edi
 	sub	eax,[ebx+18h]
 	mov	[ebx+1Ch],eax
@@ -1131,6 +1158,7 @@ ta_virtual_directive:
 	ret
       ta_close_virtual_addressing_space:
 	mov	ebx,[ta_addressing_space]
+	promote_ebx
 	mov	eax,edi
 	sub	eax,[ebx+18h]
 	mov	[ebx+1Ch],eax
@@ -1455,6 +1483,7 @@ ta_end_directive:
 	jmp	ta_invalid_argument
 ta_break_directive:
 	mov	ebx,[ta_structures_buffer]
+	promote_ebx
 	mov	al,[esi]
 	or	al,al
 	jz	ta_find_breakable_structure
@@ -1480,6 +1509,7 @@ ta_break_directive:
 	call	ta_skip_if_block
 	pop	[ta_current_line]
 	mov	ebx,[ta_structures_buffer]
+	promote_ebx
 	jmp	ta_find_breakable_structure
       ta_break_repeat:
 	push	ebx
@@ -1953,6 +1983,7 @@ ta_data_file:
 	call	ta_open
 	jnc	ta_file_opened
 	mov	edx,[ta_include_paths]
+	promote_edx
       ta_search_in_include_paths:
 	push	edx esi
 	mov	edi,esi

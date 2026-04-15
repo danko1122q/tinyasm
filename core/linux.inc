@@ -559,12 +559,15 @@ ta_assembler_error:
 	jmp	ta_exit_program
 
 ta_make_timestamp:
+	; Use clock_gettime(CLOCK_REALTIME) instead of sys_time for sub-second resolution
+	; Returns: eax = seconds (unix timestamp), edx = nanoseconds (sub-second part)
 	mov	r13d,edi
-	mov	eax,201
-	mov	edi,ta_timestamp
+	mov	eax,228			; sys_clock_gettime
+	xor	edi,edi			; CLOCK_REALTIME = 0
+	lea	rsi,[ta_timestamp]
 	syscall
-	mov	eax,dword [ta_timestamp]
-	mov	edx,dword [ta_timestamp+4]
+	mov	eax,dword [ta_timestamp]	; seconds low32
+	mov	edx,dword [ta_timestamp+8]	; nanoseconds (sub-second)
 	mov	edi,r13d
 	ret
 

@@ -6568,8 +6568,10 @@ ta_get_address:
 	jne	ta_address_ok
       ta_calculate_relative_address:
 	mov	edx,[ta_address_symbol]
+	promote_edx
 	mov	[ta_symbol_identifier],edx
 	mov	edx,[ta_address_high]
+	promote_edx
 	mov	ebp,[ta_addressing_space]
 	call	ta_calculate_relative_offset
 	mov	[ta_address_high],edx
@@ -7027,6 +7029,7 @@ ta_store_instruction:
 	cmp	[ta_displacement_compression],2
 	jbe	ta_store_address_32bit_value
 	mov	edx,[ta_uncompressed_displacement]
+	promote_edx
 	jmp	ta_store_address_32bit_value
       ta_zero_index_register:
 	mov	bl,4
@@ -7107,6 +7110,7 @@ ta_store_instruction:
       ta_address_32bit_relocation:
 	xchg	[ta_value_type],al
 	mov	ebx,[ta_address_symbol]
+	promote_ebx
 	xchg	ebx,[ta_symbol_identifier]
 	call	ta_mark_relocation
 	mov	[ta_value_type],al
@@ -7122,6 +7126,7 @@ ta_store_instruction:
 	shr	eax,16
 	xchg	[ta_value_type],al
 	mov	ebx,[ta_address_symbol]
+	promote_ebx
 	xchg	ebx,[ta_symbol_identifier]
 	call	ta_mark_relocation
 	mov	[ta_value_type],al
@@ -7184,6 +7189,7 @@ ta_store_instruction:
 	shr	ecx,16
 	xchg	[ta_value_type],cl
 	mov	ebx,[ta_address_symbol]
+	promote_ebx
 	xchg	ebx,[ta_symbol_identifier]
 	mov	eax,edx
 	call	ta_mark_relocation
