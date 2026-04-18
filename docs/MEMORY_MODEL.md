@@ -117,7 +117,7 @@ format binary
 org 0x7C00
 
     ; code here...
-    times 510-($-$$) db 0    ; pad to byte 510 (from start of this section)
+    times 510-($-$$) u8 0    ; pad to byte 510 (from start of this section)
     u16 0xAA55               ; boot signature at bytes 510-511
 ```
 
@@ -135,7 +135,7 @@ start:
     ; $ = 0x7C00 here
     mov ax, start   ; = 0x7C00
 
-    times 510-($-$$) db 0
+    times 510-($-$$) u8 0
     u16 0xAA55
 ```
 

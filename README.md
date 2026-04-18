@@ -313,7 +313,7 @@ tinyasm reports descriptive errors to stderr. Common messages and their meanings
 | `out of memory` | Exceeded the memory limit; try `-m` to increase it |
 | `code generation not possible` | A forward reference could not be resolved after max passes |
 | `output format limit exceeded` | Output binary exceeds format constraints |
-| `unknown instruction` | Unrecognised mnemonic or directive |
+| `unknown instruction` | Unrecognised mnemonic, or using NASM/FASM directives that don't exist here (`db`, `dw`, `dd`, `dq`, `dt`) — use `u8`, `u16`, `u32`, `u64`, `u80` instead |
 | `invalid operand` | Operand type not valid for this instruction |
 | `operand size invalid` | Size override is not permitted here |
 | `operand size missing` | Size is ambiguous; add `u8`/`u16`/`u32`/`u64` |

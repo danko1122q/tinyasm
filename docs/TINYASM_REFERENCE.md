@@ -194,7 +194,7 @@ start:
     int 0x10
     jmp $
 
-times 510-($-$$) db 0
+times 510-($-$$) u8 0
 u16 0xAA55
 ```
 
@@ -202,7 +202,7 @@ u16 0xAA55
 
 ## Data Directives
 
-tinyasm uses its own data directives — **not** NASM's `db/dw/dd/dq`. These are incompatible with other assemblers.
+tinyasm uses its own data directives (`u8`, `u16`, `u32`, etc.) — **not** NASM/FASM's `db/dw/dd/dq/dt`. Those directives do not exist in tinyasm and will cause `unknown instruction` errors.
 
 ### Defining Data (`u*`)
 
@@ -256,15 +256,13 @@ flag     u8 ?
 ### `times` / `repeat` — Repeat Data
 
 ```asm
-times 510-($-$$) db 0   ; fill to offset 510 with zeros (bootloader padding)
+times 510-($-$$) u8 0   ; fill to offset 510 with zeros (bootloader padding)
 
 ; or use repeat block:
 repeat 16
     u8 0
 end repeat
 ```
-
-> **Note:** `db` is only valid inside `times`. Outside of that context, use `u8`.
 
 ### `$` and `$$`
 
@@ -917,7 +915,7 @@ start:
     jmp $               ; hang
 
 ; ── Padding & Boot Signature ─────────────────────────────────────────────────
-times 510-($-$$) db 0
+times 510-($-$$) u8 0
 u16 0xAA55
 ```
 
@@ -1030,7 +1028,7 @@ int 0x80
 |-------|---------------|
 | `undefined symbol 'X'` | `X` was used but never defined. Check spelling, include order, or add a `-d X=value` define. |
 | `symbol redefined` | Same label declared more than once in the same scope. |
-| `unknown instruction` | Typo in mnemonic, or using wrong mode (e.g., `db` outside `times`). |
+| `unknown instruction` | Typo in mnemonic, or using a NASM/FASM directive that doesn't exist here (e.g., `db`, `dw`, `dd`, `dq`). Use `u8`, `u16`, `u32`, `u64` instead. |
 | `invalid operand` | Operand type not valid here (e.g., two memory operands). |
 | `operand size missing` | Size is ambiguous — add `byte`/`word`/`dword`/`qword` override. |
 | `operand size mismatch` | Source and dest sizes differ and can't be inferred. |
