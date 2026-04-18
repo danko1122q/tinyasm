@@ -1,6 +1,6 @@
-include_variable db 'INCLUDE',0
+tny_include_var db 'TNYASM_INCLUDE',0
 
-symbol_characters db 27
+tny_token_delimiters db 27
  db 9,0Ah,0Dh,1Ah,20h,'+-/*=<>()[]{}:,|&~#`;\'
 
 ta_preprocessor_directives:

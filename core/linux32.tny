@@ -360,11 +360,11 @@ ta_display_block:
 ta_fatal_error:
 	call	ta_flush_output
 	mov	[ta_con_handle],2
-	mov	esi,error_prefix
+	mov	esi,tny_error_prefix
 	call	ta_display_string
 	pop	esi
 	call	ta_display_string
-	mov	esi,error_suffix
+	mov	esi,tny_error_suffix
 	call	ta_display_string
 	call	ta_flush_output
 	mov	al,0FFh
@@ -397,7 +397,7 @@ ta_assembler_error:
       ta_display_error_line:
 	mov	esi,[ebx]
 	call	ta_display_string
-	mov	esi,line_number_start
+	mov	esi,tny_line_number_start
 	call	ta_display_string
 	mov	eax,[ebx+4]
 	and	eax,7FFFFFFFh
@@ -414,7 +414,7 @@ ta_assembler_error:
 	movzx	ecx,byte [esi]
 	inc	esi
 	call	ta_display_block
-	mov	esi,line_number_start
+	mov	esi,tny_line_number_start
 	call	ta_display_string
 	pop	esi
 	mov	eax,[esi+4]
@@ -423,7 +423,7 @@ ta_assembler_error:
 	mov	dl,']'
 	call	ta_display_character
       ta_line_number_ok:
-	mov	esi,line_data_start
+	mov	esi,tny_line_data_start
 	call	ta_display_string
 	mov	esi,ebx
 	mov	edx,[esi]
@@ -464,14 +464,14 @@ ta_assembler_error:
 	sub	ecx,esi
 	call	ta_display_block
       ta_line_data_displayed:
-	mov	esi,lf
+	mov	esi,tny_lf
 	call	ta_display_string
 	pop	ebx
 	or	ebx,ebx
 	jnz	ta_display_error_line
 	cmp	[ta_preprocessing_done],0
 	je	ta_display_error_message
-	mov	esi,preprocessed_instruction_prefix
+	mov	esi,tny_preprocessed_instruction_prefix
 	call	ta_display_string
 	mov	esi,[ta_current_line]
 	add	esi,16
@@ -527,14 +527,14 @@ ta_assembler_error:
 	stosb
 	mov	esi,[ta_additional_memory]
 	call	ta_display_string
-	mov	esi,lf
+	mov	esi,tny_lf
 	call	ta_display_string
       ta_display_error_message:
-	mov	esi,error_prefix
+	mov	esi,tny_error_prefix
 	call	ta_display_string
 	pop	esi
 	call	ta_display_string
-	mov	esi,error_suffix
+	mov	esi,tny_error_suffix
 	call	ta_display_string
 	mov	al,2
 	jmp	ta_exit_program
@@ -549,9 +549,9 @@ ta_make_timestamp:
 	pop	ebx
 	ret
 
-error_prefix db 'error: ',0
-error_suffix db '.'
-lf db 0xA,0
-line_number_start db ' [',0
-line_data_start db ':',0xA,0
-preprocessed_instruction_prefix db 'processed: ',0
+tny_error_prefix db 'error: ',0
+tny_error_suffix db '.'
+tny_lf db 0xA,0
+tny_line_number_start db ' [',0
+tny_line_data_start db ':',0xA,0
+tny_preprocessed_instruction_prefix db 'processed: ',0

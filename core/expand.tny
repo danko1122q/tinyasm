@@ -10,20 +10,20 @@ ta_preprocessor:
 	mov	ecx,26
 	rep	movsb
 	mov	edi,ta_characters
-	mov	esi,symbol_characters+1
+	mov	esi,tny_token_delimiters+1
 	movzx	ecx,byte [esi-1]
 	xor	eax,eax
-      ta_mark_symbol_characters:
+      ta_mark_token_delimiters:
 	lodsb
 	mov	byte [edi+eax],0
-	loop	ta_mark_symbol_characters
+	loop	ta_mark_token_delimiters
 	mov	edi,ta_locals_counter
 	mov	ax,1 + '0' shl 8
 	stos	word [edi]
 	mov	edi,[ta_memory_start]
 	promote_edi
 	mov	[ta_include_paths],edi
-	mov	esi,include_variable
+	mov	esi,tny_include_var
 	call	ta_get_environment_variable
 	; if env var was found, append ';' separator before -i paths
 	cmp	edi,[ta_include_paths]
@@ -2294,9 +2294,9 @@ ta_do_match:
 	cmp	al,22h
 	je	ta_match_quoted_strings
 	cmp	al,ah
-	je	ta_symbol_characters_matched
+	je	ta_token_delimiters_matched
 	ret
-      ta_symbol_characters_matched:
+      ta_token_delimiters_matched:
 	lea	ebx,[ebx+1]
 	lea	esi,[esi+1]
 	ret
