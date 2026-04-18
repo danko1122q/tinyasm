@@ -2259,3 +2259,223 @@ ta_assert_directive:
 	mov	[ta_error_line],eax
 	mov	[ta_error],ta_assertion_failed
 	jmp	ta_instruction_assembled
+
+; ---------------------------------------------------------------
+; u8/u16/u32/u64/u80 - alias handlers (delegate ke existing)
+; ---------------------------------------------------------------
+
+ta_data_u8:
+	jmp	ta_data_bytes
+ta_data_u16:
+	jmp	ta_data_words
+ta_data_u32:
+	jmp	ta_data_dwords
+ta_data_u64:
+	jmp	ta_data_qwords
+ta_data_u80:
+	jmp	ta_data_twords
+
+; ---------------------------------------------------------------
+; u128 - define 16-byte (oword) integer data
+; Sintaks: u128 expr [, expr ...]
+; Tiap expr adalah nilai 64-bit, disimpan sebagai dua qword (lo, hi=0)
+; Untuk full 128-bit: u128 lo_val, hi_val  (dua item terpisah)
+; ---------------------------------------------------------------
+
+ta_data_owords:
+	call	ta_define_data
+	jc	ta_instruction_assembled
+      ta_oword_value:
+	lods	byte [esi]
+	cmp	al,'('
+	je	ta_get_oword
+	cmp	al,'?'
+	jne	ta_invalid_argument
+	; undefined: 16 bytes kosong
+	mov	eax,edi
+	and	dword [edi],0
+	scas	dword [edi]
+	and	dword [edi],0
+	scas	dword [edi]
+	and	dword [edi],0
+	scas	dword [edi]
+	and	dword [edi],0
+	scas	dword [edi]
+	jmp	ta_undefined_data
+      ta_get_oword:
+	cmp	byte [esi],'.'
+	je	ta_invalid_value
+	call	ta_get_qword_value
+	call	ta_mark_relocation
+	stos	dword [edi]		; lo dword
+	mov	eax,edx
+	stos	dword [edi]		; hi dword of 64-bit value
+	xor	eax,eax
+	stos	dword [edi]		; upper 64 bits = 0
+	stos	dword [edi]
+	ret
+
+; ---------------------------------------------------------------
+; u256 - define 32-byte (yword) integer data
+; ---------------------------------------------------------------
+
+ta_data_ywords:
+	call	ta_define_data
+	jc	ta_instruction_assembled
+      ta_yword_value:
+	lods	byte [esi]
+	cmp	al,'('
+	je	ta_get_yword
+	cmp	al,'?'
+	jne	ta_invalid_argument
+	mov	eax,edi
+	and	dword [edi],0
+	scas	dword [edi]
+	and	dword [edi],0
+	scas	dword [edi]
+	and	dword [edi],0
+	scas	dword [edi]
+	and	dword [edi],0
+	scas	dword [edi]
+	and	dword [edi],0
+	scas	dword [edi]
+	and	dword [edi],0
+	scas	dword [edi]
+	and	dword [edi],0
+	scas	dword [edi]
+	and	dword [edi],0
+	scas	dword [edi]
+	jmp	ta_undefined_data
+      ta_get_yword:
+	cmp	byte [esi],'.'
+	je	ta_invalid_value
+	call	ta_get_qword_value
+	call	ta_mark_relocation
+	stos	dword [edi]
+	mov	eax,edx
+	stos	dword [edi]
+	xor	eax,eax
+	stos	dword [edi]
+	stos	dword [edi]
+	stos	dword [edi]
+	stos	dword [edi]
+	stos	dword [edi]
+	stos	dword [edi]
+	ret
+
+; ---------------------------------------------------------------
+; u512 - define 64-byte (zword) integer data
+; ---------------------------------------------------------------
+
+ta_data_zwords:
+	call	ta_define_data
+	jc	ta_instruction_assembled
+      ta_zword_value:
+	lods	byte [esi]
+	cmp	al,'('
+	je	ta_get_zword
+	cmp	al,'?'
+	jne	ta_invalid_argument
+	mov	ecx,16
+      ta_zword_undef_loop:
+	and	dword [edi],0
+	scas	dword [edi]
+	loop	ta_zword_undef_loop
+	jmp	ta_undefined_data
+      ta_get_zword:
+	cmp	byte [esi],'.'
+	je	ta_invalid_value
+	call	ta_get_qword_value
+	call	ta_mark_relocation
+	stos	dword [edi]
+	mov	eax,edx
+	stos	dword [edi]
+	xor	eax,eax
+	mov	ecx,14
+      ta_zword_zero_loop:
+	stos	dword [edi]
+	loop	ta_zword_zero_loop
+	ret
+
+; ---------------------------------------------------------------
+; Reserve handlers untuk u128/u256/u512
+; ---------------------------------------------------------------
+
+ta_reserve_owords:
+	lods	byte [esi]
+	cmp	al,'('
+	jne	ta_invalid_argument
+	cmp	byte [esi],'.'
+	je	ta_invalid_value
+	call	ta_get_count_value
+	; ecx = count * 16 bytes
+	mov	ecx,eax
+	shl	ecx,4
+	jc	ta_out_of_memory
+	mov	edx,ecx
+	add	edx,edi
+	jc	ta_out_of_memory
+	cmp	edx,[ta_tagged_blocks]
+	ja	ta_out_of_memory
+	push	edi
+	cmp	[ta_next_pass_needed],0
+	je	ta_zero_owords
+	add	edi,ecx
+	jmp	ta_reserved_data
+      ta_zero_owords:
+	xor	eax,eax
+	shr	ecx,2
+	rep	stos dword [edi]
+	jmp	ta_reserved_data
+
+ta_reserve_ywords:
+	lods	byte [esi]
+	cmp	al,'('
+	jne	ta_invalid_argument
+	cmp	byte [esi],'.'
+	je	ta_invalid_value
+	call	ta_get_count_value
+	mov	ecx,eax
+	shl	ecx,5
+	jc	ta_out_of_memory
+	mov	edx,ecx
+	add	edx,edi
+	jc	ta_out_of_memory
+	cmp	edx,[ta_tagged_blocks]
+	ja	ta_out_of_memory
+	push	edi
+	cmp	[ta_next_pass_needed],0
+	je	ta_zero_ywords
+	add	edi,ecx
+	jmp	ta_reserved_data
+      ta_zero_ywords:
+	xor	eax,eax
+	shr	ecx,2
+	rep	stos dword [edi]
+	jmp	ta_reserved_data
+
+ta_reserve_zwords:
+	lods	byte [esi]
+	cmp	al,'('
+	jne	ta_invalid_argument
+	cmp	byte [esi],'.'
+	je	ta_invalid_value
+	call	ta_get_count_value
+	mov	ecx,eax
+	shl	ecx,6
+	jc	ta_out_of_memory
+	mov	edx,ecx
+	add	edx,edi
+	jc	ta_out_of_memory
+	cmp	edx,[ta_tagged_blocks]
+	ja	ta_out_of_memory
+	push	edi
+	cmp	[ta_next_pass_needed],0
+	je	ta_zero_zwords
+	add	edi,ecx
+	jmp	ta_reserved_data
+      ta_zero_zwords:
+	xor	eax,eax
+	shr	ecx,2
+	rep	stos dword [edi]
+	jmp	ta_reserved_data

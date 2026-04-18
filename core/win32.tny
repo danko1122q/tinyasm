@@ -726,16 +726,16 @@ ta_make_timestamp:
 
 ; ---- Shared string data ----------------------------------------------------
 
-tny_error_prefix db 'error: ',0
-tny_error_suffix db '.'
-tny_lf           db 0Dh,0Ah,0
-tny_line_number_start db ' [',0
-tny_line_data_start   db ':',0Dh,0Ah,0
-tny_preprocessed_instruction_prefix db 'processed: ',0
+tny_error_prefix u8 'error: ',0
+tny_error_suffix u8 '.'
+tny_lf           u8 0Dh,0Ah,0
+tny_line_number_start u8 ' [',0
+tny_line_data_start   u8 ':',0Dh,0Ah,0
+tny_preprocessed_instruction_prefix u8 'processed: ',0
 
 ; ---- Win32 scratch buffers -------------------------------------------------
 
-ta_bytes_count  dd ?
+ta_bytes_count  u32 ?
 ta_w32_argc_buf rb 4 + 64*4 + 4
 ta_w32_argv_str rb 4096
 
@@ -744,47 +744,47 @@ ta_w32_argv_str rb 4096
 
 section '.idata' import data readable
 
-  dd 0,0,0,RVA kernel32_name,RVA kernel32_table
-  dd 0,0,0,0,0
+  u32 0,0,0,RVA kernel32_name,RVA kernel32_table
+  u32 0,0,0,0,0
 
   kernel32_table:
-    CreateFile          dd RVA _CreateFile
-    ReadFile            dd RVA _ReadFile
-    WriteFile           dd RVA _WriteFile
-    CloseHandle         dd RVA _CloseHandle
-    SetFilePointer      dd RVA _SetFilePointer
-    VirtualAlloc        dd RVA _VirtualAlloc
-    VirtualFree         dd RVA _VirtualFree
-    ExitProcess         dd RVA _ExitProcess
-    GetStdHandle        dd RVA _GetStdHandle
-    GetCommandLine      dd RVA _GetCommandLine
-    GetEnvironmentVariable dd RVA _GetEnvironmentVariable
-    GetSystemTime       dd RVA _GetSystemTime
-  dd 0
+    CreateFile          u32 RVA _CreateFile
+    ReadFile            u32 RVA _ReadFile
+    WriteFile           u32 RVA _WriteFile
+    CloseHandle         u32 RVA _CloseHandle
+    SetFilePointer      u32 RVA _SetFilePointer
+    VirtualAlloc        u32 RVA _VirtualAlloc
+    VirtualFree         u32 RVA _VirtualFree
+    ExitProcess         u32 RVA _ExitProcess
+    GetStdHandle        u32 RVA _GetStdHandle
+    GetCommandLine      u32 RVA _GetCommandLine
+    GetEnvironmentVariable u32 RVA _GetEnvironmentVariable
+    GetSystemTime       u32 RVA _GetSystemTime
+  u32 0
 
-  kernel32_name db 'KERNEL32.DLL',0
+  kernel32_name u8 'KERNEL32.DLL',0
 
-  _CreateFile             dw 0
-    db 'CreateFileA',0
-  _ReadFile               dw 0
-    db 'ReadFile',0
-  _WriteFile              dw 0
-    db 'WriteFile',0
-  _CloseHandle            dw 0
-    db 'CloseHandle',0
-  _SetFilePointer         dw 0
-    db 'SetFilePointer',0
-  _VirtualAlloc           dw 0
-    db 'VirtualAlloc',0
-  _VirtualFree            dw 0
-    db 'VirtualFree',0
-  _ExitProcess            dw 0
-    db 'ExitProcess',0
-  _GetStdHandle           dw 0
-    db 'GetStdHandle',0
-  _GetCommandLine         dw 0
-    db 'GetCommandLineA',0
-  _GetEnvironmentVariable dw 0
-    db 'GetEnvironmentVariableA',0
-  _GetSystemTime          dw 0
-    db 'GetSystemTime',0
+  _CreateFile             u16 0
+    u8 'CreateFileA',0
+  _ReadFile               u16 0
+    u8 'ReadFile',0
+  _WriteFile              u16 0
+    u8 'WriteFile',0
+  _CloseHandle            u16 0
+    u8 'CloseHandle',0
+  _SetFilePointer         u16 0
+    u8 'SetFilePointer',0
+  _VirtualAlloc           u16 0
+    u8 'VirtualAlloc',0
+  _VirtualFree            u16 0
+    u8 'VirtualFree',0
+  _ExitProcess            u16 0
+    u8 'ExitProcess',0
+  _GetStdHandle           u16 0
+    u8 'GetStdHandle',0
+  _GetCommandLine         u16 0
+    u8 'GetCommandLineA',0
+  _GetEnvironmentVariable u16 0
+    u8 'GetEnvironmentVariableA',0
+  _GetSystemTime          u16 0
+    u8 'GetSystemTime',0

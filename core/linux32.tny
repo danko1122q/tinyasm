@@ -31,7 +31,7 @@ S_IXOTH    = 0001o
 TA_OUT_BUF_SIZE = 4000h		; 16 KB
 
 segment readable writeable
-ta_out_buf_pos	dd ?
+ta_out_buf_pos	u32 ?
 ta_out_buf	rb TA_OUT_BUF_SIZE
 segment readable executable
 
@@ -68,7 +68,7 @@ ta_init_memory:
       ta_no_low_memory:
 	push	_ta_no_low_memory_str
 	jmp	ta_fatal_error
-_ta_no_low_memory_str db 'failed to allocate memory within 32-bit addressing range',0
+_ta_no_low_memory_str u8 'failed to allocate memory within 32-bit addressing range',0
 
 ; ---------------------------------------------------------------------------
 ; ta_exit_program  al = exit code
@@ -549,9 +549,9 @@ ta_make_timestamp:
 	pop	ebx
 	ret
 
-tny_error_prefix db 'error: ',0
-tny_error_suffix db '.'
-tny_lf db 0xA,0
-tny_line_number_start db ' [',0
-tny_line_data_start db ':',0xA,0
-tny_preprocessed_instruction_prefix db 'processed: ',0
+tny_error_prefix u8 'error: ',0
+tny_error_suffix u8 '.'
+tny_lf u8 0xA,0
+tny_line_number_start u8 ' [',0
+tny_line_data_start u8 ':',0xA,0
+tny_preprocessed_instruction_prefix u8 'processed: ',0

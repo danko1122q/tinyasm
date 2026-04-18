@@ -2,11 +2,11 @@ format binary
 org 0x7C00
 
 ; --- CETAK BIRU FORMAT .TIN v2 ---
-db 'TI'                ; [00] Signature
-db start - $$          ; [02] Offset ke kode
-db 00000101b           ; [03] Flags: (1=Bootable, 0=Reserved, 1=VGA)
-dw 0x9000              ; [04] Stack Pointer awal
-db "DAVA-ARCH", 0      ; [06] Metadata Author
+u8 'TI'                ; [00] Signature
+u8 start - $$          ; [02] Offset ke kode
+u8 00000101b           ; [03] Flags: (1=Bootable, 0=Reserved, 1=VGA)
+u16 0x9000              ; [04] Stack Pointer awal
+u8 "DAVA-ARCH", 0      ; [06] Metadata Author
 
 start:
     ; 1. Baca Flags dari Header sendiri (0x7C03)
@@ -40,4 +40,4 @@ no_vga:
 
 ; --- FOOTER ---
 times 510-($-$$) db 0
-dw 0xAA55
+u16 0xAA55

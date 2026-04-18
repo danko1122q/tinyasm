@@ -444,7 +444,7 @@ ta_make_stub:
 	int	21h
 	mov	ax,4C01h
 	int	21h
-      stub_message db 'This program cannot be run in DOS mode.',0Dh,0Ah,24h
+      stub_message u8 'This program cannot be run in DOS mode.',0Dh,0Ah,24h
 	rq	1
       ta_default_stub_end:
 	use32

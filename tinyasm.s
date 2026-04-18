@@ -338,7 +338,7 @@ include 'core/win32.tny'
 else
 
 segment readable writeable
-ta_out_buf_pos dd ?
+ta_out_buf_pos u32 ?
 ta_out_buf rb TA_OUT_BUF_SIZE
 
 segment readable executable
@@ -347,24 +347,24 @@ end if
 
 include 'core/ver.tny'
 
-_ta_copyright db 'tinyasm project',0xA,0
+_ta_copyright u8 'tinyasm project',0xA,0
 
-_ta_logo db 'tinyasm  version ',VERSION_STRING,0
-_ta_usage db 0xA
-       db 'usage: tinyasm <source> [output]',0xA
-       db 'optional settings:',0xA
-       db ' -m <limit>         set the limit in kilobytes for the available memory',0xA
-       db ' -p <limit>         set the maximum allowed number of passes',0xA
-       db ' -d <name>=<value>     define symbolic variable',0xA
-       db ' -s <file>          dump symbolic information for debugging',0xA
-       db ' -i <path>          add directory to include search path',0xA
-       db 0
-_ta_memory_prefix db '  (',0
-_ta_memory_suffix db ' kilobytes memory, x64)',0xA,0
-_ta_passes_suffix db ' passes, ',0
-_ta_seconds_suffix db ' ms, ',0
-_ta_bytes_suffix db ' bytes.',0xA,0
-_ta_no_low_memory db 'failed to allocate memory within 32-bit addressing range',0
+_ta_logo u8 'tinyasm  version ',VERSION_STRING,0
+_ta_usage u8 0xA
+       u8 'usage: tinyasm <source> [output]',0xA
+       u8 'optional settings:',0xA
+       u8 ' -m <limit>         set the limit in kilobytes for the available memory',0xA
+       u8 ' -p <limit>         set the maximum allowed number of passes',0xA
+       u8 ' -d <name>=<value>     define symbolic variable',0xA
+       u8 ' -s <file>          dump symbolic information for debugging',0xA
+       u8 ' -i <path>          add directory to include search path',0xA
+       u8 0
+_ta_memory_prefix u8 '  (',0
+_ta_memory_suffix u8 ' kilobytes memory, x64)',0xA,0
+_ta_passes_suffix u8 ' passes, ',0
+_ta_seconds_suffix u8 ' ms, ',0
+_ta_bytes_suffix u8 ' bytes.',0xA,0
+_ta_no_low_memory u8 'failed to allocate memory within 32-bit addressing range',0
 
 include 'core/fault.tny'
 include 'core/dump.tny'
@@ -386,21 +386,21 @@ align 4
 
 include 'core/state.tny'
 
-ta_command_line dq ?
-ta_memory_setting dd ?
-ta_path_pointer dd ?
-ta_definitions_pointer dd ?
-ta_environment dq ?
-ta_timestamp dq ?
-ta_start_time dq ?
-ta_con_handle dd ?
-ta_displayed_count dd ?
-ta_last_displayed db ?
-ta_character db ?
-ta_preprocessing_done db ?
+ta_command_line u64 ?
+ta_memory_setting u32 ?
+ta_path_pointer u32 ?
+ta_definitions_pointer u32 ?
+ta_environment u64 ?
+ta_timestamp u64 ?
+ta_start_time u64 ?
+ta_con_handle u32 ?
+ta_displayed_count u32 ?
+ta_last_displayed u8 ?
+ta_character u8 ?
+ta_preprocessing_done u8 ?
 
 ta_buffer rb 1000h
 ta_predefinitions rb 1000h
 ta_paths rb 10000h
 ta_include_extra rb 4000h
-ta_include_extra_ptr dd ?
+ta_include_extra_ptr u32 ?
