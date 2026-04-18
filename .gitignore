@@ -2,6 +2,12 @@ tinyasm
 tinyasm2
 tiny
 tny
+tiny32
+tiny64
+tinyasm32
+tinyasm64
+tny32
+tny64
 
 *.exe
 *.com
