@@ -37,18 +37,18 @@ A lightweight x86/x64 assembler for Linux and Windows, derived from [fasm (flat 
 
 ### Bootstrap (first time)
 
-If you don't have a tinyasm binary yet, build it with an existing assembler:
+tinyasm uses its own data directives (`u8`, `u16`, `u32`, etc.) that are not compatible with fasm or other external assemblers. To build from source, download a pre-built tinyasm binary from the [releases page](../../releases) for your platform, then use it to compile:
 
 ```sh
 # Linux 64-bit
-fasm tinyasm.s tinyasm
+./tinyasm tinyasm.s tinyasm
 chmod +x tinyasm
 
 # Windows 64-bit
-fasm -d WIN32=1 tinyasm.s tinyasm.exe
+./tinyasm -d WIN32=1 tinyasm.s tinyasm.exe
 
 # Linux 32-bit (separate entry file)
-fasm tinyasm32.s tinyasm32
+./tinyasm tinyasm32.s tinyasm32
 chmod +x tinyasm32
 ```
 
