@@ -5,7 +5,7 @@
 ; Default: Linux ELF64
 
 if defined WIN32
-	format	PE64 GUI 5.0
+	format	PE64 console 5.0
 	entry	ta_start
 else
 	format	ELF64 executable 3 at 400000h
@@ -14,15 +14,19 @@ end if
 
 	include 'core/platform.tny'
 
+if defined WIN32
+section '.text' code readable executable
+else
 segment readable executable
+end if
 
 ta_start:
 
 if defined WIN32
 	call	ta_win32_init_argv
 	mov	[ta_con_handle],1
-	push	STD_OUTPUT_HANDLE
-	call	[GetStdHandle]
+	pushD	STD_OUTPUT_HANDLE
+	call near qword [GetStdHandle]
 	mov	[ta_con_handle],eax
 else
 	mov	[ta_con_handle],1
@@ -50,6 +54,10 @@ end if
 	mov	esi,_ta_memory_suffix
 	call	ta_display_string
 
+if defined WIN32
+	call	near qword [GetTickCount64]
+	mov	[ta_start_time],rax
+else
 	mov	eax,228
 	mov	edi,1
 	mov	rsi,ta_buffer
@@ -64,6 +72,7 @@ end if
 	div	rcx
 	add	rax,rbx
 	mov	[ta_start_time],rax
+end if
 
 	and	[ta_preprocessing_done],0
 	call	ta_preprocessor
@@ -78,6 +87,10 @@ end if
 	call	ta_display_number
 	mov	esi,_ta_passes_suffix
 	call	ta_display_string
+if defined WIN32
+	call	near qword [GetTickCount64]
+	sub	rax,[ta_start_time]
+else
 	mov	eax,228
 	mov	edi,1
 	mov	rsi,ta_buffer
@@ -92,6 +105,7 @@ end if
 	div	rcx
 	add	rax,rbx
 	sub	rax,[ta_start_time]
+end if
       ta_time_ok:
 	call	ta_display_number
 	mov	esi,_ta_seconds_suffix
@@ -335,6 +349,7 @@ ta_collect_path:
 
 if defined WIN32
 include 'core/win32.tny'
+section '.text' code readable executable
 else
 
 segment readable writeable
@@ -380,7 +395,11 @@ include 'core/output_fmt.tny'
 include 'core/structs.tny'
 include 'core/msgdata.tny'
 
+if defined WIN32
+section '.data' data readable writeable
+else
 segment readable writeable
+end if
 
 align 4
 

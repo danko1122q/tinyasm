@@ -1,9 +1,9 @@
-; tinyasm Win32 platform layer
-; Drop-in replacement for core/linux .tny when targeting Windows.
-; All symbols use the ta_ prefix to match tinyasm naming conventions.
+; tinyasm Win64 platform layer
+; Win64 ABI: fastcall (rcx, rdx, r8, r9, [rsp+20h], [rsp+28h]...)
+; Caller allocates 32-byte shadow space. Stack 16-byte aligned before call.
+; r10,r11 are volatile. r12-r15,rbx,rbp,rsi,rdi are callee-saved.
 
-; ---- Win32 constants -------------------------------------------------------
-
+; ---- Constants -------------------------------------------------------------
 GENERIC_READ           = 80000000h
 GENERIC_WRITE          = 40000000h
 FILE_SHARE_READ        = 1
@@ -22,35 +22,36 @@ INVALID_HANDLE_VALUE   = -1
 
 ; ---------------------------------------------------------------------------
 ; ta_init_memory
-;   Mirrors the brk-based logic in linux .tny exactly.
-;   Allocates via VirtualAlloc, splits into heap (lower 3/4) + auxmem (upper 1/4).
+;   VirtualAlloc(NULL, size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
 ; ---------------------------------------------------------------------------
 ta_init_memory:
 	mov	eax,esp
 	and	eax,not 0FFFh
 	add	eax,1000h-10000h
 	mov	[ta_stack_limit],eax
-	mov	ecx,[ta_memory_setting]
-	shl	ecx,10
-	jnz	.ta_do_alloc
-	mov	ecx,4000000h		; default 64 MiB
-  .ta_do_alloc:
-	push	PAGE_READWRITE
-	push	MEM_COMMIT+MEM_RESERVE
-	push	ecx
-	push	0
-	call	[VirtualAlloc]
+	mov	edx,[ta_memory_setting]
+	shl	edx,10
+	jnz	.alloc
+	mov	edx,4000000h
+  .alloc:
+	mov	r15d,edx			; save size
+	sub	rsp,20h
+	xor	ecx,ecx				; lpAddress = NULL
+	mov	edx,r15d			; dwSize
+	mov	r8d,MEM_COMMIT+MEM_RESERVE	; flAllocationType
+	mov	r9d,PAGE_READWRITE		; flProtect
+	call	near qword [VirtualAlloc]
+	add	rsp,20h
 	or	eax,eax
 	jz	ta_out_of_memory
 	mov	[ta_additional_memory],eax
-	; split: lower 3/4 = heap, upper 1/4 = auxmem
-	mov	edx,ecx
-	shr	edx,2			; edx = size/4
+	mov	edx,r15d
+	shr	edx,2
 	add	edx,[ta_additional_memory]
 	mov	[ta_additional_memory_end],edx
 	mov	[ta_memory_start],edx
 	mov	edx,[ta_additional_memory]
-	add	edx,ecx
+	add	edx,r15d
 	mov	[ta_memory_end],edx
 	ret
 
@@ -58,182 +59,190 @@ ta_init_memory:
 ; ta_exit_program  al = exit code
 ; ---------------------------------------------------------------------------
 ta_exit_program:
-	movzx	eax,al
+	movzx	r15d,al
 	mov	ecx,[ta_additional_memory]
 	test	ecx,ecx
-	jz	.ta_do_exit
-	push	eax
-	push	MEM_RELEASE
-	push	0
-	push	ecx
-	call	[VirtualFree]
-	pop	eax
-  .ta_do_exit:
-	push	eax
-	call	[ExitProcess]
+	jz	.do_exit
+	sub	rsp,20h
+	; VirtualFree(addr, 0, MEM_RELEASE)
+	; ecx already = addr
+	xor	edx,edx
+	mov	r8d,MEM_RELEASE
+	xor	r9d,r9d
+	call	near qword [VirtualFree]
+	add	rsp,20h
+  .do_exit:
+	sub	rsp,20h
+	mov	ecx,r15d
+	call	near qword [ExitProcess]
 
 ; ---------------------------------------------------------------------------
-; ta_win32_init_argv
-;   Parses GetCommandLineA() into argc/argv layout compatible with linux .tny.
-;   Sets ta_command_line to point at our synthetic argc/argv block.
+; ta_win32_init_argv  - parse GetCommandLineA into argc/argv
 ; ---------------------------------------------------------------------------
 ta_win32_init_argv:
-	push	ebx ecx edx esi edi ebp
+	sub rsp,8
+	mov [rsp],rbx
+	sub rsp,8
+	mov [rsp],rsi
+	sub rsp,8
+	mov [rsp],rdi
+	sub rsp,8
+	mov [rsp],rbp
+	sub	rsp,28h
 
-	call	[GetCommandLine]	; eax -> "prog.exe arg1 arg2\0"
+	sub	rsp,20h
+	call	near qword [GetCommandLine]
+	add	rsp,20h
 	mov	esi,eax
 
 	lea	edi,[ta_w32_argv_str]
-	lea	ebx,[ta_w32_argc_buf+4]	; first argv slot
-	xor	ecx,ecx			; argc = 0
+	lea	ebx,[ta_w32_argc_buf+4]
+	xor	ebp,ebp
 
-  .ta_skip_ws:
+  .skip_ws:
 	lodsb
 	cmp	al,' '
-	je	.ta_skip_ws
-	cmp	al,9			; TAB
-	je	.ta_skip_ws
+	je	.skip_ws
+	cmp	al,9
+	je	.skip_ws
 	or	al,al
-	jz	.ta_done
+	jz	.done
 
 	mov	[ebx],edi
 	add	ebx,4
-	inc	ecx
+	inc	ebp
 
-  .ta_token_chr:
+  .tok:
 	cmp	al,'"'
-	je	.ta_quoted
+	je	.quoted
 	cmp	al,' '
-	je	.ta_token_end
+	je	.tok_end
 	cmp	al,9
-	je	.ta_token_end
+	je	.tok_end
 	or	al,al
-	jz	.ta_token_nul
+	jz	.tok_nul
 	stosb
 	lodsb
-	jmp	.ta_token_chr
+	jmp	.tok
 
-  .ta_quoted:
+  .quoted:
 	lodsb
-  .ta_quoted_chr:
+  .qchr:
 	or	al,al
-	jz	.ta_token_nul
+	jz	.tok_nul
 	cmp	al,'"'
-	jne	.ta_quoted_store
+	jne	.qstore
 	cmp	byte [esi],'"'
-	jne	.ta_quoted_end
+	jne	.qend
 	inc	esi
-  .ta_quoted_store:
+  .qstore:
 	stosb
 	lodsb
-	jmp	.ta_quoted_chr
-  .ta_quoted_end:
+	jmp	.qchr
+  .qend:
 	lodsb
-	jmp	.ta_token_chr
+	jmp	.tok
 
-  .ta_token_end:
+  .tok_end:
 	xor	al,al
 	stosb
-	jmp	.ta_skip_ws
+	jmp	.skip_ws
 
-  .ta_token_nul:
+  .tok_nul:
 	xor	al,al
 	stosb
 
-  .ta_done:
+  .done:
 	mov	dword [ebx],0
-	mov	dword [ta_w32_argc_buf],ecx
+	mov	dword [ta_w32_argc_buf],ebp
 	lea	eax,[ta_w32_argc_buf]
 	mov	[ta_command_line],rax
 
-	pop	ebp edi esi edx ecx ebx
+	add	rsp,28h
+	mov rbp,[rsp]
+	add rsp,8
+	mov rdi,[rsp]
+	add rsp,8
+	mov rsi,[rsp]
+	add rsp,8
+	mov rbx,[rsp]
+	add rsp,8
 	ret
 
 ; ---------------------------------------------------------------------------
-; ta_get_environment_variable
-;   esi = pointer to null-terminated variable name
-;   edi = destination buffer
-;   Mirrors linux .tny walk-environ logic via GetEnvironmentVariableA.
+; ta_get_environment_variable  esi=name  edi=dest_buf
+;   GetEnvironmentVariableA(name, buf, size)
 ; ---------------------------------------------------------------------------
 ta_get_environment_variable:
-	push	ebx ecx edx
+	sub rsp,8
+	mov [rsp],rbx
+	sub	rsp,20h
 	mov	ecx,[ta_memory_end]
 	sub	ecx,edi
 	cmp	ecx,4000h
-	jbe	.ta_size_ok
+	jbe	.sz_ok
 	mov	ecx,4000h
-  .ta_size_ok:
-	push	ecx
-	push	edi
-	push	esi
-	call	[GetEnvironmentVariable]
+  .sz_ok:
+	mov	r8d,ecx
+	mov	rdx,rdi
+	mov	rcx,rsi
+	call	near qword [GetEnvironmentVariable]
+	add	rsp,20h
 	or	eax,eax
-	jz	.ta_miss
+	jz	.miss
 	add	edi,eax
 	cmp	edi,[ta_memory_end]
 	jae	ta_out_of_memory
-  .ta_miss:
-	pop	edx ecx ebx
+  .miss:
+	mov rbx,[rsp]
+	add rsp,8
 	ret
 
 ; ---------------------------------------------------------------------------
-; ta_open  edx = null-terminated path
-;          returns ebx = HANDLE, CF set on error
+; ta_adapt_path  edx=source  ->  copies to ta_buffer, \ to /
 ; ---------------------------------------------------------------------------
-ta_open:
-	mov	r12d,esi
-	mov	r13d,edi
-	call	ta_adapt_path
-	push	0			; hTemplateFile
-	push	0			; dwFlagsAndAttributes
-	push	OPEN_EXISTING
-	push	0			; lpSecurityAttributes
-	push	FILE_SHARE_READ
-	push	GENERIC_READ
-	push	ta_buffer
-	call	[CreateFile]
-	mov	esi,r12d
-	mov	edi,r13d
-	cmp	eax,INVALID_HANDLE_VALUE
-	je	ta_file_error
-	mov	ebx,eax
-	clc
-	ret
-
-    ta_adapt_path:
+ta_adapt_path:
 	mov	esi,edx
 	mov	edi,ta_buffer
-      ta_copy_path:
+  .copy:
 	lods	byte [esi]
 	cmp	al,'\'
-	jne	ta_path_char_ok
+	jne	.ok
 	mov	al,'/'
-      ta_path_char_ok:
+  .ok:
 	stos	byte [edi]
 	or	al,al
-	jnz	ta_copy_path
-	cmp	edi,ta_buffer+1000h
-	ja	ta_out_of_memory
+	jnz	.copy
 	ret
 
 ; ---------------------------------------------------------------------------
-; ta_create  edx = null-terminated path
-;            returns ebx = HANDLE, CF set on error
+; ta_open  edx=path  -> ebx=handle  CF on error
+;   CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL)
 ; ---------------------------------------------------------------------------
-ta_create:
+ta_open:
+	sub rsp,8
+	mov [rsp],r12
+	sub rsp,8
+	mov [rsp],r13
 	mov	r12d,esi
 	mov	r13d,edi
 	call	ta_adapt_path
-	push	0			; hTemplateFile
-	push	80h			; FILE_ATTRIBUTE_NORMAL
-	push	CREATE_ALWAYS
-	push	0
-	push	FILE_SHARE_READ
-	push	GENERIC_WRITE
-	push	ta_buffer
-	call	[CreateFile]
+	sub	rsp,38h
+	lea	rcx,[ta_buffer]
+	mov	edx,GENERIC_READ
+	mov	r8d,FILE_SHARE_READ
+	xor	r9d,r9d
+	mov	dword [rsp+20h],OPEN_EXISTING
+	mov	dword [rsp+28h],0
+	mov	dword [rsp+30h],0
+	call	near qword [CreateFile]
+	add	rsp,38h
 	mov	esi,r12d
 	mov	edi,r13d
+	mov r13,[rsp]
+	add rsp,8
+	mov r12,[rsp]
+	add rsp,8
 	cmp	eax,INVALID_HANDLE_VALUE
 	je	ta_file_error
 	mov	ebx,eax
@@ -241,120 +250,232 @@ ta_create:
 	ret
 
 ; ---------------------------------------------------------------------------
-; ta_close  ebx = handle
+; ta_create  edx=path  -> ebx=handle  CF on error
 ; ---------------------------------------------------------------------------
-ta_close:
+ta_create:
+	sub rsp,8
+	mov [rsp],r12
+	sub rsp,8
+	mov [rsp],r13
+	mov	r12d,esi
 	mov	r13d,edi
-	push	ebx
-	call	[CloseHandle]
+	call	ta_adapt_path
+	sub	rsp,38h
+	lea	rcx,[ta_buffer]
+	mov	edx,GENERIC_WRITE
+	mov	r8d,FILE_SHARE_READ
+	xor	r9d,r9d
+	mov	dword [rsp+20h],CREATE_ALWAYS
+	mov	dword [rsp+28h],80h
+	mov	dword [rsp+30h],0
+	call	near qword [CreateFile]
+	add	rsp,38h
+	mov	esi,r12d
 	mov	edi,r13d
+	mov r13,[rsp]
+	add rsp,8
+	mov r12,[rsp]
+	add rsp,8
+	cmp	eax,INVALID_HANDLE_VALUE
+	je	ta_file_error
+	mov	ebx,eax
+	clc
 	ret
 
 ; ---------------------------------------------------------------------------
-; ta_read  ebx=handle  edx=buf  ecx=count
-;          CF set on error or short read
+; ta_close  ebx=handle
+; ---------------------------------------------------------------------------
+ta_close:
+	sub rsp,8
+	mov [rsp],r13
+	mov	r13d,edi
+	sub	rsp,20h
+	mov	ecx,ebx
+	call	near qword [CloseHandle]
+	add	rsp,20h
+	mov	edi,r13d
+	mov r13,[rsp]
+	add rsp,8
+	ret
+
+; ---------------------------------------------------------------------------
+; ta_read  ebx=handle  edx=buf  ecx=count  CF on error/short
 ; ---------------------------------------------------------------------------
 ta_read:
+	sub rsp,8
+	mov [rsp],r12
+	sub rsp,8
+	mov [rsp],r13
+	sub rsp,8
+	mov [rsp],r14
 	mov	r12d,esi
 	mov	r13d,edi
-	push	0			; lpOverlapped
-	push	ta_bytes_count
-	push	ecx
-	push	edx
-	push	ebx
-	call	[ReadFile]
+	mov	r14d,ecx		; save count
+	sub	rsp,30h
+	mov	ecx,ebx		; hFile
+	mov	edx,edx		; buf (zero-extended by mov edx,edx)
+	mov	r8d,r14d	; nBytesToRead
+	lea	r9,[ta_bytes_count]
+	mov	qword [rsp+20h],0
+	call	near qword [ReadFile]
+	add	rsp,30h
 	mov	esi,r12d
 	mov	edi,r13d
+	mov r14,[rsp]
+	add rsp,8
+	mov r13,[rsp]
+	add rsp,8
+	mov r12,[rsp]
+	add rsp,8
 	or	eax,eax
 	jz	ta_file_error
-	cmp	ecx,[ta_bytes_count]
+	cmp	r14d,[ta_bytes_count]
 	jne	ta_file_error
 	clc
 	ret
-    ta_file_error:
+
+; ---------------------------------------------------------------------------
+; ta_write  ebx=handle  edx=buf  ecx=count  CF on error
+; ---------------------------------------------------------------------------
+ta_write:
+	sub rsp,8
+	mov [rsp],r12
+	sub rsp,8
+	mov [rsp],r13
+	sub rsp,8
+	mov [rsp],r14
+	mov	r12d,esi
+	mov	r13d,edi
+	mov	r14d,ecx
+	sub	rsp,30h
+	mov	ecx,ebx
+	mov	edx,edx
+	mov	r8d,r14d
+	lea	r9,[ta_bytes_count]
+	mov	qword [rsp+20h],0
+	call	near qword [WriteFile]
+	add	rsp,30h
+	mov	esi,r12d
+	mov	edi,r13d
+	mov r14,[rsp]
+	add rsp,8
+	mov r13,[rsp]
+	add rsp,8
+	mov r12,[rsp]
+	add rsp,8
+	or	eax,eax
+	jz	ta_file_error
+	clc
+	ret
+
+  ta_file_error:
 	stc
 	ret
 
 ; ---------------------------------------------------------------------------
-; ta_write  ebx=handle  edx=buf  ecx=count
-;           CF set on error
-; ---------------------------------------------------------------------------
-ta_write:
-	mov	r12d,esi
-	mov	r13d,edi
-	push	0
-	push	ta_bytes_count
-	push	ecx
-	push	edx
-	push	ebx
-	call	[WriteFile]
-	mov	esi,r12d
-	mov	edi,r13d
-	or	eax,eax
-	jz	ta_file_error
-	clc
-	ret
-
-; ---------------------------------------------------------------------------
-; ta_lseek  ebx=handle  edx=offset  al=whence(0=SET,1=CUR,2=END)
-;           returns eax=new position, CF set on error
+; ta_lseek  ebx=handle  edx=offset  al=whence  -> eax=pos  CF on error
+;   SetFilePointer(hFile, lDistanceToMove, NULL, dwMoveMethod)
+;   (32-bit version - sufficient since tinyasm files < 4GB)
 ; ---------------------------------------------------------------------------
 ta_lseek:
+	sub rsp,8
+	mov [rsp],r12
+	sub rsp,8
+	mov [rsp],r13
+	sub rsp,8
+	mov [rsp],r14
 	mov	r12d,esi
 	mov	r13d,edi
-	movzx	eax,al
-	push	eax			; dwMoveMethod
-	push	0			; lDistanceToMoveHigh
-	push	edx
-	push	ebx
-	call	[SetFilePointer]
+	movzx	r14d,al
+	sub	rsp,20h
+	mov	ecx,ebx		; hFile
+	mov	edx,edx		; lDistanceToMove
+	xor	r8d,r8d		; lpDistanceToMoveHigh = NULL
+	mov	r9d,r14d	; dwMoveMethod
+	call	near qword [SetFilePointer]
+	add	rsp,20h
 	mov	esi,r12d
 	mov	edi,r13d
+	mov r14,[rsp]
+	add rsp,8
+	mov r13,[rsp]
+	add rsp,8
+	mov r12,[rsp]
+	add rsp,8
 	cmp	eax,INVALID_HANDLE_VALUE
 	je	ta_file_error
 	clc
 	ret
 
 ; ---------------------------------------------------------------------------
-; ta_display_string  esi = null-terminated string
+; ta_display_string  esi=null-terminated string
 ; ---------------------------------------------------------------------------
 ta_display_string:
+	sub rsp,8
+	mov [rsp],r12
+	sub rsp,8
+	mov [rsp],r13
+	mov	r12d,esi
+	mov	r13d,edi
+	; compute length
 	mov	edi,esi
-	mov	edx,esi
 	or	ecx,-1
 	xor	al,al
 	repne	scasb
 	neg	ecx
 	sub	ecx,2
-	jle	.ta_done
-	push	0
-	push	ta_bytes_count
-	push	ecx
-	push	edx
-	push	[ta_con_handle]
-	call	[WriteFile]
-  .ta_done:
+	jle	.done
+	sub rsp,8
+	mov [rsp],r14
+	mov	r14d,ecx
+	sub	rsp,30h
+	mov	ecx,[ta_con_handle]
+	mov	rdx,r12
+	mov	r8d,r14d
+	lea	r9,[ta_bytes_count]
+	mov	qword [rsp+20h],0
+	call	near qword [WriteFile]
+	add	rsp,30h
+	mov r14,[rsp]
+	add rsp,8
+  .done:
+	mov	esi,r12d
+	mov	edi,r13d
+	mov r13,[rsp]
+	add rsp,8
+	mov r12,[rsp]
+	add rsp,8
 	ret
 
 ; ---------------------------------------------------------------------------
-; ta_display_character  dl = character
+; ta_display_character  dl=char
 ; ---------------------------------------------------------------------------
 ta_display_character:
+	sub rsp,8
+	mov [rsp],r12
+	sub rsp,8
+	mov [rsp],r13
 	mov	r12d,esi
 	mov	r13d,edi
 	mov	[ta_character],dl
-	push	0
-	push	ta_bytes_count
-	push	1
-	push	ta_character
-	push	[ta_con_handle]
-	call	[WriteFile]
+	sub	rsp,30h
+	mov	ecx,[ta_con_handle]
+	lea	rdx,[ta_character]
+	mov	r8d,1
+	lea	r9,[ta_bytes_count]
+	mov	qword [rsp+20h],0
+	call	near qword [WriteFile]
+	add	rsp,30h
 	mov	esi,r12d
 	mov	edi,r13d
+	mov r13,[rsp]
+	add rsp,8
+	mov r12,[rsp]
+	add rsp,8
 	ret
 
 ; ---------------------------------------------------------------------------
-; ta_display_number  eax = uint32
+; ta_display_number  eax=uint32
 ; ---------------------------------------------------------------------------
 ta_display_number:
 	mov	r14d,ebx
@@ -412,28 +533,47 @@ ta_display_block:
 	add	[ta_displayed_count],ecx
 	mov	al,[esi+ecx-1]
 	mov	[ta_last_displayed],al
+	sub rsp,8
+	mov [rsp],r12
+	sub rsp,8
+	mov [rsp],r13
+	sub rsp,8
+	mov [rsp],r14
+	mov	r12d,esi
 	mov	r13d,edi
-	push	0
-	push	ta_bytes_count
-	push	ecx
-	push	esi
-	push	[ta_con_handle]
-	call	[WriteFile]
+	mov	r14d,ecx
+	sub	rsp,30h
+	mov	ecx,[ta_con_handle]
+	mov	rdx,r12
+	mov	r8d,r14d
+	lea	r9,[ta_bytes_count]
+	mov	qword [rsp+20h],0
+	call	near qword [WriteFile]
+	add	rsp,30h
+	mov	esi,r12d
 	mov	edi,r13d
+	mov r14,[rsp]
+	add rsp,8
+	mov r13,[rsp]
+	add rsp,8
+	mov r12,[rsp]
+	add rsp,8
       ta_block_displayed:
 	ret
 
 ; ---------------------------------------------------------------------------
-; ta_fatal_error
-;   [esp] = pointer to error message string
+; ta_fatal_error  [rsp] = error msg ptr
 ; ---------------------------------------------------------------------------
 ta_fatal_error:
-	push	STD_ERROR_HANDLE
-	call	[GetStdHandle]
+	sub	rsp,20h
+	mov	ecx,STD_ERROR_HANDLE
+	call	near qword [GetStdHandle]
+	add	rsp,20h
 	mov	[ta_con_handle],eax
 	mov	esi,tny_error_prefix
 	call	ta_display_string
-	pop	esi
+	mov rsi,[rsp]
+	add rsp,8
 	call	ta_display_string
 	mov	esi,tny_error_suffix
 	call	ta_display_string
@@ -444,19 +584,21 @@ ta_fatal_error:
 ; ta_assembler_error
 ; ---------------------------------------------------------------------------
 ta_assembler_error:
-	push	STD_ERROR_HANDLE
-	call	[GetStdHandle]
+	sub	rsp,20h
+	mov	ecx,STD_ERROR_HANDLE
+	call	near qword [GetStdHandle]
+	add	rsp,20h
 	mov	[ta_con_handle],eax
 	call	ta_display_user_messages
 	mov	ebx,[ta_current_line]
 	test	ebx,ebx
 	jz	ta_display_error_message
-	push	dword 0
+	pushD	0
       ta_get_error_lines:
 	mov	eax,[ebx]
 	cmp	byte [eax],0
 	je	ta_get_next_error_line
-	push	ebx
+	pushD	ebx
 	test	byte [ebx+7],80h
 	jz	ta_display_error_line
 	mov	edx,ebx
@@ -464,7 +606,7 @@ ta_assembler_error:
 	mov	edx,[edx+12]
 	test	byte [edx+7],80h
 	jnz	ta_find_definition_origin
-	push	edx
+	pushD	edx
       ta_get_next_error_line:
 	mov	ebx,[ebx+8]
 	jmp	ta_get_error_lines
@@ -483,7 +625,7 @@ ta_assembler_error:
 	je	ta_line_number_ok
 	mov	dl,20h
 	call	ta_display_character
-	push	esi
+	pushD	esi
 	mov	esi,[esi]
 	movzx	ecx,byte [esi]
 	inc	esi
@@ -508,10 +650,10 @@ ta_assembler_error:
 	mov	edx,[esi+8]
 	sub	eax,edx
 	jz	ta_line_data_displayed
-	push	eax
+	pushD	eax
 	xor	al,al
 	call	ta_lseek
-	mov	ecx,[esp]
+	mov	ecx,[rsp]
 	mov	edx,[ta_additional_memory]
 	lea	eax,[edx+ecx]
 	cmp	eax,[ta_additional_memory_end]
@@ -614,36 +756,38 @@ ta_assembler_error:
 	jmp	ta_exit_program
 
 ; ---------------------------------------------------------------------------
-; ta_make_timestamp -> eax = milliseconds component, edx = seconds*1000
-;   Uses GetSystemTime, mirrors linux .tny timing interface.
+; ta_make_timestamp -> eax = unix seconds (approx)
 ; ---------------------------------------------------------------------------
 ta_make_timestamp:
+	sub rsp,8
+	mov [rsp],r13
+	sub rsp,8
+	mov [rsp],rbp
+	sub rsp,8
+	mov [rsp],rbx
 	mov	r13d,edi
-	sub	esp,16			; SYSTEMTIME buffer
-	mov	esi,esp
-	push	esi
-	call	[GetSystemTime]
+	sub	rsp,28h
+	sub	rsp,16			; SYSTEMTIME struct (16 bytes)
+	mov	rcx,rsp
+	call	near qword [GetSystemTime]
+	mov	rsi,rsp
 
-	; days since 1970-01-01 (same algorithm as FASM)
-	movzx	ecx,word [esi]		; wYear
+	movzx	ecx,word [rsi]		; wYear
 	mov	eax,ecx
 	sub	eax,1970
 	mov	ebx,365
 	mul	ebx
 	mov	ebp,eax
-
 	mov	eax,ecx
 	sub	eax,1969
 	shr	eax,2
 	add	ebp,eax
-
 	mov	eax,ecx
 	sub	eax,1901
 	mov	ebx,100
 	xor	edx,edx
 	div	ebx
 	sub	ebp,eax
-
 	mov	eax,ecx
 	xor	edx,edx
 	sub	eax,1601
@@ -651,81 +795,75 @@ ta_make_timestamp:
 	div	ebx
 	add	ebp,eax
 
-	movzx	ecx,word [esi+2]	; wMonth
+	movzx	ecx,word [rsi+2]	; wMonth
 	mov	eax,ecx
 	dec	eax
 	mov	ebx,30
 	mul	ebx
 	add	ebp,eax
-
 	cmp	ecx,8
-	jbe	.ta_months_corr
+	jbe	.mc
 	mov	eax,ecx
 	sub	eax,7
 	shr	eax,1
 	add	ebp,eax
 	mov	ecx,8
-  .ta_months_corr:
+  .mc:
 	mov	eax,ecx
 	shr	eax,1
 	add	ebp,eax
-
 	cmp	ecx,2
-	jbe	.ta_day_corr_ok
+	jbe	.dc
 	sub	ebp,2
-	movzx	ecx,word [esi]
+	movzx	ecx,word [rsi]
 	test	ecx,11b
-	jnz	.ta_day_corr_ok
+	jnz	.dc
 	xor	edx,edx
 	mov	eax,ecx
 	mov	ebx,100
 	div	ebx
 	or	edx,edx
-	jnz	.ta_day_corr
+	jnz	.d1
 	mov	eax,ecx
 	mov	ebx,400
 	xor	edx,edx
 	div	ebx
 	or	edx,edx
-	jnz	.ta_day_corr_ok
-  .ta_day_corr:
+	jnz	.dc
+  .d1:
 	inc	ebp
-  .ta_day_corr_ok:
-
-	movzx	eax,word [esi+6]	; wDay
+  .dc:
+	movzx	eax,word [rsi+6]	; wDay
 	dec	eax
 	add	eax,ebp
-
 	mov	ebx,24
 	mul	ebx
-	movzx	ecx,word [esi+8]	; wHour
+	movzx	ecx,word [rsi+8]	; wHour
 	add	eax,ecx
 	mov	ebx,60
 	mul	ebx
-	movzx	ecx,word [esi+10]	; wMinute
+	movzx	ecx,word [rsi+10]	; wMinute
 	add	eax,ecx
 	mov	ebx,60
 	mul	ebx
-	movzx	ecx,word [esi+12]	; wSecond
+	movzx	ecx,word [rsi+12]	; wSecond
 	add	eax,ecx
 
-	; multiply by 1000 for milliseconds
-	mov	ecx,1000
-	mul	ecx
-	; add wMilliseconds
-	movzx	ecx,word [esi+14]	; wMilliseconds
-	add	eax,ecx
-
-	add	esp,16
-	mov	edi,r13d
+	add	rsp,16
+	add	rsp,28h
 	xor	edx,edx
-	; store into ta_timestamp like linux .tny does
 	mov	dword [ta_timestamp],eax
 	mov	dword [ta_timestamp+4],edx
+	mov	edi,r13d
+	mov rbx,[rsp]
+	add rsp,8
+	mov rbp,[rsp]
+	add rsp,8
+	mov r13,[rsp]
+	add rsp,8
 	ret
 
-; ---- Shared string data ----------------------------------------------------
-
+; ---- Strings ---------------------------------------------------------------
 tny_error_prefix u8 'error: ',0
 tny_error_suffix u8 '.'
 tny_lf           u8 0Dh,0Ah,0
@@ -733,34 +871,53 @@ tny_line_number_start u8 ' [',0
 tny_line_data_start   u8 ':',0Dh,0Ah,0
 tny_preprocessed_instruction_prefix u8 'processed: ',0
 
-; ---- Win32 scratch buffers -------------------------------------------------
-
+; ---- Scratch ---------------------------------------------------------------
 ta_bytes_count  u32 ?
 ta_w32_argc_buf rb 4 + 64*4 + 4
 ta_w32_argv_str rb 4096
 
-; ---- Win32 import table ----------------------------------------------------
-; Declared here; actual .idata section goes in tinyasm.asm after .data
-
+; ---- Import table ----------------------------------------------------------
 section '.idata' import data readable
 
-  u32 0,0,0,RVA kernel32_name,RVA kernel32_table
-  u32 0,0,0,0,0
+  ; IMAGE_IMPORT_DESCRIPTOR (5 x DWORD = 20 bytes)
+  u32 RVA kernel32_ilt            ; OriginalFirstThunk
+  u32 0                           ; TimeDateStamp
+  u32 0                           ; ForwarderChain
+  u32 RVA kernel32_name           ; Name
+  u32 RVA kernel32_table          ; FirstThunk
+  u32 0, 0, 0, 0, 0               ; null terminator
+
+  kernel32_ilt:
+    u64 RVA _CreateFile
+    u64 RVA _ReadFile
+    u64 RVA _WriteFile
+    u64 RVA _CloseHandle
+    u64 RVA _SetFilePointer
+    u64 RVA _VirtualAlloc
+    u64 RVA _VirtualFree
+    u64 RVA _ExitProcess
+    u64 RVA _GetStdHandle
+    u64 RVA _GetCommandLine
+    u64 RVA _GetEnvironmentVariable
+    u64 RVA _GetSystemTime
+    u64 RVA _GetTickCount64
+    u64 0
 
   kernel32_table:
-    CreateFile          u32 RVA _CreateFile
-    ReadFile            u32 RVA _ReadFile
-    WriteFile           u32 RVA _WriteFile
-    CloseHandle         u32 RVA _CloseHandle
-    SetFilePointer      u32 RVA _SetFilePointer
-    VirtualAlloc        u32 RVA _VirtualAlloc
-    VirtualFree         u32 RVA _VirtualFree
-    ExitProcess         u32 RVA _ExitProcess
-    GetStdHandle        u32 RVA _GetStdHandle
-    GetCommandLine      u32 RVA _GetCommandLine
-    GetEnvironmentVariable u32 RVA _GetEnvironmentVariable
-    GetSystemTime       u32 RVA _GetSystemTime
-  u32 0
+    CreateFile          u64 RVA _CreateFile
+    ReadFile            u64 RVA _ReadFile
+    WriteFile           u64 RVA _WriteFile
+    CloseHandle         u64 RVA _CloseHandle
+    SetFilePointer      u64 RVA _SetFilePointer
+    VirtualAlloc        u64 RVA _VirtualAlloc
+    VirtualFree         u64 RVA _VirtualFree
+    ExitProcess         u64 RVA _ExitProcess
+    GetStdHandle        u64 RVA _GetStdHandle
+    GetCommandLine      u64 RVA _GetCommandLine
+    GetEnvironmentVariable u64 RVA _GetEnvironmentVariable
+    GetSystemTime       u64 RVA _GetSystemTime
+    GetTickCount64      u64 RVA _GetTickCount64
+    u64 0
 
   kernel32_name u8 'KERNEL32.DLL',0
 
@@ -788,3 +945,5 @@ section '.idata' import data readable
     u8 'GetEnvironmentVariableA',0
   _GetSystemTime          u16 0
     u8 'GetSystemTime',0
+  _GetTickCount64         u16 0
+    u8 'GetTickCount64',0
