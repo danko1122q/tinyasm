@@ -104,7 +104,7 @@ Options are case-insensitive: `-m` and `-M` are equivalent.
 When resolving an `include` directive, tinyasm searches in this order:
 
 1. Directory of the file containing the `include`
-2. Paths from the `INCLUDE` environment variable (semicolon-separated)
+2. Paths from the `TNYASM_INCLUDE` environment variable (semicolon-separated)
 3. Paths added via `-i` flags (in the order given)
 
 ### Exit code
@@ -134,8 +134,8 @@ chmod +x hello64
 # Include directories
 ./tinyasm -i ./include -i /usr/local/share/asm main.s main
 
-# Combine INCLUDE env var with -i
-INCLUDE=/usr/share/asm ./tinyasm -i ./include main.s main
+# Combine TNYASM_INCLUDE env var with -i
+TNYASM_INCLUDE=/usr/share/asm ./tinyasm -i ./include main.s main
 
 # Dump symbol table
 ./tinyasm -s symbols.txt main.s main
@@ -223,20 +223,24 @@ _start:
 
 segment readable
 
-msg     db 'hello, world', 10
+msg     u8 'hello, world', 10
 msg_len = $ - msg
 ```
 
 ### Data definitions
 
 ```asm
-db  0x41, 'A', "hello"   ; bytes
-dw  1234                 ; 16-bit word
-dd  0xDEADBEEF           ; 32-bit dword
-dq  0x123456789ABCDEF0   ; 64-bit qword
+u8   0x41, 'A', "hello"   ; 8-bit bytes
+u16  1234                  ; 16-bit
+u32  0xDEADBEEF            ; 32-bit
+u64  0x123456789ABCDEF0    ; 64-bit
+u80  0x1234567890ABCDEF0011 ; 80-bit (extended precision)
+u128 0x0                   ; 128-bit (16 bytes)
+u256 0x0                   ; 256-bit (32 bytes)
+u512 0x0                   ; 512-bit (64 bytes)
 
 here:
-    db 'data'
+    u8 'data'
 size = $ - here
 ```
 
@@ -268,7 +272,7 @@ end if
 
 ```asm
 repeat 16
-    db 0
+    u8 0
 end repeat
 ```
 
@@ -313,7 +317,7 @@ tinyasm reports descriptive errors to stderr. Common messages and their meanings
 | `unknown instruction` | Unrecognised mnemonic or directive |
 | `invalid operand` | Operand type not valid for this instruction |
 | `operand size invalid` | Size override is not permitted here |
-| `operand size missing` | Size is ambiguous; add `byte`/`word`/`dword`/`qword` |
+| `operand size missing` | Size is ambiguous; add `u8`/`u16`/`u32`/`u64` |
 | `operand size mismatch` | Source and destination sizes differ |
 | `immediate value too large to encode` | Constant does not fit in the encoding |
 | `jump target out of range` | Short or near jump cannot reach the target |
